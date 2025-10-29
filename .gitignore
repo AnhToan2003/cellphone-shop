@@ -1,7 +1,8 @@
 # dependencies
 node_modules/
 server/node_modules/
-
+server/uploads/
+server/public/uploads/
 # environment files
 .env
 server/.env

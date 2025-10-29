@@ -108,3 +108,7 @@ Tất cả response tuân theo cấu trúc `{ success, message, data }`.
 
 - Zod được sử dụng để kiểm tra payload trước khi ghi dữ liệu vào MongoDB.  
 - React giao diện phong cách CellphoneS với grid responsive, skeleton loading và toast thông báo thân thiện.
+### 1️⃣ Clone project
+```bash
+git clone https://github.com/AnhToan2003/cellphone-shop.git
+cd cellphone-shop
