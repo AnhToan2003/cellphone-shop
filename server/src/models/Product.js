@@ -27,6 +27,18 @@ const productSchema = new mongoose.Schema(
     finalPrice: { type: Number, default: null },
     discountPercent: { type: Number, default: 0 },
     description: { type: String, default: "" },
+    warrantyPolicy: {
+      type: String,
+      default:
+        "Lỗi 1 đổi 1 trong 10 ngày. Bảo hành 12 tháng. Không bảo hành khi rơi vỡ hoặc vào nước.",
+      trim: true,
+    },
+    warrantyMonths: {
+      type: Number,
+      default: 12,
+      min: 1,
+      max: 60,
+    },
     category: { type: String, default: "" },
     stock: { type: Number, default: 0 },
     imageUrl: { type: String, required: true },
@@ -92,6 +104,16 @@ productSchema.pre("save", function setComputedFields(next) {
 
   if (!this.images || this.images.length === 0) {
     this.images = this.imageUrl ? [this.imageUrl] : [];
+  }
+
+  const normalizedWarrantyMonths = Number(this.warrantyMonths ?? 12);
+  if (!Number.isFinite(normalizedWarrantyMonths) || normalizedWarrantyMonths <= 0) {
+    this.warrantyMonths = 12;
+  } else {
+    this.warrantyMonths = Math.max(
+      1,
+      Math.min(60, Math.floor(normalizedWarrantyMonths))
+    );
   }
 
   if (!this.isModified("name") && this.slug) {

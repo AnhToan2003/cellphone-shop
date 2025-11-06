@@ -17,6 +17,8 @@ const initialForm = {
   oldPrice: "",
   stock: "",
   description: "",
+  warrantyPolicy: "",
+  warrantyMonths: "12",
   imageUrl: "",
   colors: "",
   capacities: "",
@@ -204,6 +206,11 @@ const ManageProducts = () => {
       oldPrice: product.oldPrice ?? "",
       stock: product.stock ?? "",
       description: product.description || "",
+      warrantyPolicy: product.warrantyPolicy || "",
+      warrantyMonths:
+        product.warrantyMonths !== undefined && product.warrantyMonths !== null
+          ? String(product.warrantyMonths)
+          : "12",
       imageUrl: currentImage,
       colors,
       capacities,
@@ -235,6 +242,16 @@ const ManageProducts = () => {
       return;
     }
 
+    const normalizedWarrantyMonths =
+      form.warrantyMonths === "" ? 12 : Number(form.warrantyMonths);
+    if (
+      !Number.isFinite(normalizedWarrantyMonths) ||
+      normalizedWarrantyMonths <= 0
+    ) {
+      toast.error("Vui lòng nhập thời hạn bảo hành hợp lệ (tháng).");
+      return;
+    }
+
     const payload = {
       name: form.name.trim(),
       brand: form.brand.trim(),
@@ -242,6 +259,10 @@ const ManageProducts = () => {
       oldPrice: form.oldPrice ? Number(form.oldPrice) : undefined,
       stock: form.stock ? Number(form.stock) : undefined,
       description: form.description ? form.description.trim() : "",
+      warrantyPolicy: form.warrantyPolicy
+        ? form.warrantyPolicy.trim()
+        : "",
+      warrantyMonths: normalizedWarrantyMonths,
       options: {
         colors: colorList,
         capacities: capacityList,
@@ -528,6 +549,41 @@ const ManageProducts = () => {
               className="rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-brand-primary focus:ring-1 focus:ring-brand-primary/40"
               placeholder="Nêu bật tính năng chính, ưu điểm của sản phẩm..."
             />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-slate-300" htmlFor="warrantyMonths">
+              Thời hạn bảo hành (tháng)
+            </label>
+            <input
+              id="warrantyMonths"
+              name="warrantyMonths"
+              type="number"
+              min={1}
+              max={60}
+              value={form.warrantyMonths}
+              onChange={handleChange}
+              className="rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-brand-primary focus:ring-1 focus:ring-brand-primary/40"
+              placeholder="Ví dụ: 12"
+            />
+          </div>
+
+          <div className="space-y-2 md:col-span-2">
+            <label className="text-sm font-medium text-slate-300" htmlFor="warrantyPolicy">
+              Chính sách bảo hành chi tiết
+            </label>
+            <textarea
+              id="warrantyPolicy"
+              name="warrantyPolicy"
+              value={form.warrantyPolicy}
+              onChange={handleChange}
+              rows={3}
+              className="rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-brand-primary focus:ring-1 focus:ring-brand-primary/40"
+              placeholder="Mô tả điều kiện bảo hành, thời gian đổi mới, các trường hợp không áp dụng..."
+            />
+            <p className="text-xs text-slate-500">
+              Nội dung này sẽ hiển thị cho khách hàng trong trang chi tiết sản phẩm và mục bảo hành.
+            </p>
           </div>
 
           <div className="grid gap-4 lg:grid-cols-[1fr,auto]">

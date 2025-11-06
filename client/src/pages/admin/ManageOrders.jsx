@@ -14,6 +14,13 @@ const STATUS_META = {
   cancelled: { label: "Đã hủy", tone: "bg-rose-100 text-rose-600" },
 };
 
+const PAYMENT_STATUS_LABELS = {
+  pending: "Chờ xử lý",
+  awaiting: "Chờ chuyển khoản",
+  completed: "Đã thanh toán",
+  failed: "Thanh toán thất bại",
+};
+
 const currency = (value = 0) =>
   new Intl.NumberFormat("vi-VN", {
     style: "currency",
@@ -69,7 +76,7 @@ const ManageOrders = () => {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 font-sans">
       <header className="flex flex-col gap-2">
         <p className="text-xs uppercase tracking-[0.3em] text-brand-primary">
           Đơn hàng
@@ -101,6 +108,19 @@ const ManageOrders = () => {
           <div className="divide-y divide-slate-800">
             {orders.map((order) => {
               const meta = STATUS_META[order.status] || STATUS_META.pending;
+              const payment = order.payment || {};
+              const paymentStatusLabel =
+                PAYMENT_STATUS_LABELS[payment.status] || PAYMENT_STATUS_LABELS.pending;
+              const paymentReference = payment.reference;
+              const paymentTransferContent = payment.transferContent;
+              
+              const paymentConfirmedAt = payment.confirmedAt
+                ? new Date(payment.confirmedAt).toLocaleString("vi-VN")
+                : null;
+              const paymentMessage =
+                typeof payment.message === "string" && payment.message.trim()
+                  ? payment.message
+                  : "";
               const displayStatus = order.statusLabel || meta.label;
               return (
                 <div
@@ -120,6 +140,27 @@ const ManageOrders = () => {
                     <p>{order.shippingInfo?.address}</p>
                     <p>SĐT: {order.shippingInfo?.phone}</p>
                     <p>Thanh toán: {order.paymentMethod?.toUpperCase?.()}</p>
+                    <p className="text-xs text-slate-500">
+                      Trạng thái thanh toán: {paymentStatusLabel}
+                    </p>
+                    {paymentReference && (
+                      <p className="text-xs text-slate-500">
+                        Mã tham chiếu: <span className="font-mono text-slate-200">{paymentReference}</span>
+                      </p>
+                    )}
+                    {paymentTransferContent && (
+                      <p className="text-xs text-slate-500">
+                        Nội dung chuyển khoản: <span className="font-mono text-slate-200">{paymentTransferContent}</span>
+                      </p>
+                    )}
+
+
+                    {paymentConfirmedAt && (
+                      <p className="text-xs text-slate-500">Xác nhận: {paymentConfirmedAt}</p>
+                    )}
+                    {paymentMessage && (
+                      <p className="text-[11px] text-slate-500">{paymentMessage}</p>
+                    )}
                   </div>
                   <div className="col-span-2 text-right font-semibold text-slate-100">
                     {currency(order.totals?.grand)}
@@ -207,3 +248,6 @@ const ManageOrders = () => {
 };
 
 export default ManageOrders;
+
+
+

@@ -69,6 +69,12 @@ export const updateAdminOrderStatus = (orderId, payload) =>
 export const cancelMyOrder = (orderId) =>
   apiClient.patch(`/orders/${orderId}/cancel`);
 
+export const confirmMyOrderPayment = (orderId) =>
+  apiClient.patch(`/orders/${orderId}/payment/confirm`);
+
+export const fetchMyWarrantyItems = () =>
+  apiClient.get("/orders/me/warranty");
+
 export const fetchLatestProducts = (limit = 5) =>
   apiClient.get(`/products${buildQueryString({ limit })}`);
 

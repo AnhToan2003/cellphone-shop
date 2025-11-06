@@ -22,7 +22,7 @@ export default {
         muted: "#f4f6fb",
       },
       fontFamily: {
-        sans: ["Roboto", "system-ui", "sans-serif"],
+        sans: ["Inter", "Roboto", "system-ui", "sans-serif"],
       },
       boxShadow: {
         header: "0 10px 30px rgba(225, 29, 72, 0.18)",

@@ -1,0 +1,54 @@
+const DEFAULT_BANK_BIN = process.env.VIETQR_BANK_BIN || "970436";
+const DEFAULT_ACCOUNT_NO = process.env.VIETQR_ACCOUNT_NO || "1014252931";
+const DEFAULT_TEMPLATE_ID = process.env.VIETQR_TEMPLATE_ID || "dgq67g5";
+const DEFAULT_BASE_URL = `https://api.vietqr.io/image/${DEFAULT_BANK_BIN}-${DEFAULT_ACCOUNT_NO}-${DEFAULT_TEMPLATE_ID}.jpg`;
+
+const normalizeSeed = (seed = "") =>
+  typeof seed === "string"
+    ? seed
+        .toUpperCase()
+        .replace(/[^A-Z0-9]/g, "")
+        .slice(-6)
+    : "";
+
+export const generateVietqrReference = (seed = "") => {
+  const timestamp = Date.now().toString(36).toUpperCase();
+  const random = Math.floor(1000 + Math.random() * 9000)
+    .toString(36)
+    .toUpperCase();
+
+  return `DH${timestamp}${normalizeSeed(seed)}${random}`.slice(0, 18);
+};
+
+export const buildTransferContent = (reference) => {
+  const code = reference || "DONHANG";
+  return `Thanh toán don hàng ${code}`;
+};
+
+export const buildVietqrImageUrl = ({
+  amount,
+  description,
+  baseUrl = process.env.VIETQR_QUICK_LINK || DEFAULT_BASE_URL,
+}) => {
+  const url = new URL(baseUrl);
+  const numericAmount = Math.max(0, Math.round(Number(amount) || 0));
+  url.searchParams.set("amount", String(numericAmount));
+
+  if (description) {
+    url.searchParams.set("addInfo", description);
+  }
+
+  if (process.env.VIETQR_ACCOUNT_NAME) {
+    url.searchParams.set("accountName", process.env.VIETQR_ACCOUNT_NAME);
+  }
+
+  return url.toString();
+};
+
+export default {
+  generateVietqrReference,
+  buildTransferContent,
+  buildVietqrImageUrl,
+};
+
+
