@@ -1,4 +1,4 @@
-import { createBrowserRouter } from "react-router-dom";
+﻿import { createBrowserRouter } from "react-router-dom";
 
 import PublicLayout from "../App.jsx";
 import ProtectedRoute from "../components/ProtectedRoute.jsx";
@@ -20,13 +20,13 @@ import ProductDetail from "../pages/ProductDetail.jsx";
 import Register from "../pages/Register.jsx";
 import Favorites from "../pages/Favorites.jsx";
 import Profile from "../pages/Profile.jsx";
+import WarrantyPolicy from "../pages/WarrantyPolicy.jsx";
+import PaymentReturn from "../pages/PaymentReturn.jsx";
 
 const NotFound = () => (
   <div className="container-safe py-20 text-center">
     <h1 className="text-3xl font-bold text-slate-900">404</h1>
-    <p className="mt-4 text-slate-500">
-      Không tìm thấy trang bạn yêu cầu.
-    </p>
+    <p className="mt-4 text-slate-500">Không tìm thấy trang bạn yêu cầu.</p>
   </div>
 );
 
@@ -60,6 +60,22 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute>
             <Profile />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "warranty",
+        element: (
+          <ProtectedRoute>
+            <WarrantyPolicy />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "payment-return",
+        element: (
+          <ProtectedRoute>
+            <PaymentReturn />
           </ProtectedRoute>
         ),
       },

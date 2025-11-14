@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-hot-toast";
@@ -226,19 +226,28 @@ const ProductDetail = () => {
         comment: reviewForm.comment,
       });
       toast.success("Cảm ơn bạn đã đánh giá!");
+      const currentRating = reviewForm.rating;
       setReviewForm({ rating: 5, comment: "" });
-      setReviews((prev) => [data.data, ...prev]);
-      setReviewMeta((prev) => ({
-        ...prev,
-        total: (prev.total || 0) + 1,
-        average: Number(
-          (
-            ((prev.average || 0) * (prev.total || 0) + reviewForm.rating) /
-            ((prev.total || 0) + 1)
-          ).toFixed(2)
-        ),
-        canReview: false,
-      }));
+
+      try {
+        const refreshed = await fetchProductReviews(product.slug);
+        setReviews(refreshed.data.data);
+        setReviewMeta(refreshed.data.meta);
+      } catch (refreshError) {
+        console.error("Failed to refresh reviews:", refreshError);
+        setReviews((prev) => [data.data, ...prev]);
+        setReviewMeta((prev) => ({
+          ...prev,
+          total: (prev.total || 0) + 1,
+          average: Number(
+            (
+              ((prev.average || 0) * (prev.total || 0) + currentRating) /
+              ((prev.total || 0) + 1)
+            ).toFixed(2)
+          ),
+          canReview: false,
+        }));
+      }
     } catch (error) {
       const message =
         error?.response?.data?.message || "Không thể gửi đánh giá";
@@ -298,6 +307,11 @@ const ProductDetail = () => {
           Math.round(((comparePrice - finalPrice) / comparePrice) * 100)
         )
       : product.effectiveDiscountPercent ?? product.discountPercent ?? 0;
+
+  const warrantyPolicy =
+    typeof product?.warrantyPolicy === "string" && product.warrantyPolicy.trim()
+      ? product.warrantyPolicy.trim()
+      : "Lỗi 1 đổi 1 trong 10 ngày. Bảo hành 12 tháng. Không bảo hành khi rơi vỡ hoặc vào nước.";
 
   return (
     <div className="container-safe py-12">
@@ -483,6 +497,16 @@ const ProductDetail = () => {
             </div>
           </div>
 
+          <div className="mt-6 rounded-2xl bg-white p-6 shadow">
+            <h2 className="text-lg font-semibold text-slate-900">Chính sách bảo hành</h2>
+            <p className="mt-2 text-sm text-slate-600">{warrantyPolicy}</p>
+            <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-slate-500">
+              <li>Lỗi kỹ thuật được đổi mới trong 10 ngày đầu.</li>
+              <li>Bảo hành tối đa 12 tháng tại hệ thống cửa hàng.</li>
+              <li>Không bảo hành nếu sản phẩm rơi vỡ hoặc vào nước.</li>
+            </ul>
+          </div>
+
           {product.specs && Object.keys(product.specs).length > 0 && (
             <div className="mt-6 rounded-2xl bg-white p-6 shadow">
               <h3 className="text-lg font-semibold text-slate-900">
@@ -604,23 +628,3 @@ const ProductDetail = () => {
 };
 
 export default ProductDetail;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

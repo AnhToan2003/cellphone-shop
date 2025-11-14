@@ -1,0 +1,20 @@
+{
+  "name": "vietqr-demo",
+  "version": "1.0.0",
+  "description": "Simple VietQR checkout demo",
+  "type": "module",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js"
+  },
+  "keywords": [
+    "vietqr",
+    "express",
+    "demo"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^5.1.0"
+  }
+}

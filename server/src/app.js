@@ -1,10 +1,10 @@
-// server/src/app.js
+﻿// server/src/app.js
 import "dotenv/config";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import express from "express";
-import helmet from "helmet";          // ✅ CHỈ import 1 lần
+import helmet from "helmet";          // âœ… CHá»ˆ import 1 láº§n
 import morgan from "morgan";
 
 import { connectDB } from "./db.js";
@@ -16,6 +16,7 @@ import bannerRoutes from "./routes/banner.routes.js";
 import { publicBasePath, uploadsBasePath } from "./middleware/upload.js";
 import { errorHandler, notFoundHandler } from "./middleware/error.js";
 import { seedAdmin } from "./seed/seedAdmin.js";
+import { ensureReviewIndexes } from "./services/indexMaintenance.service.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -33,7 +34,7 @@ ensureDirectories();
 export const createServer = () => {
   const app = express();
 
-  // ✅ CSP DEV chỉ 1 lần. Browser CHỈ truy cập http://localhost:5000
+  // âœ… CSP DEV chá»‰ 1 láº§n. Browser CHá»ˆ truy cáº­p http://localhost:5000
   app.use(helmet({
     crossOriginEmbedderPolicy: false,
     crossOriginResourcePolicy: { policy: "cross-origin" },
@@ -45,7 +46,7 @@ export const createServer = () => {
         "style-src": ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
         "font-src": ["'self'", "data:", "https://fonts.gstatic.com"],
         "script-src": ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
-        // ⚠️ Chỉ self + 5000 để không “đòi” thêm host khác (5173, 3000…)
+       
         "connect-src": ["'self'", "http://localhost:5000", "https:"],
         "frame-src": ["'self'"],
       },
@@ -64,7 +65,7 @@ export const createServer = () => {
   app.use("/api/admin", adminRoutes);
   app.use("/api/banners", bannerRoutes);
 
-  // Demo banner JSON (giữ/ bỏ tùy bạn)
+  // Demo banner JSON (giá»¯/ bá» tÃ¹y báº¡n)
   app.get("/api/banner", (req, res) => {
     res.json({
       sentence: "Welcome to Cellphone Shop",
@@ -72,7 +73,7 @@ export const createServer = () => {
     });
   });
 
-  // Static assets + client build trên CÙNG cổng 5000
+  // Static assets + client build trÃªn CÃ™NG cá»•ng 5000
   app.use(express.static(publicRoot));
   app.use("/uploads", express.static(uploadsRoot));
   app.use(express.static(clientDistPath));
@@ -94,18 +95,21 @@ export const createServer = () => {
 export const app = createServer();
 
 if (process.env.NODE_ENV !== "test") {
-  const PORT = process.env.PORT || 5000;       // ✅ Cố định 5000
+  const PORT = process.env.PORT || 5000;       // âœ… Cá»‘ Ä‘á»‹nh 5000
   connectDB()
     .then(async () => {
       await seedAdmin();
+      await ensureReviewIndexes();
       app.listen(PORT, () => {
-        console.log(`🚀 Cellphone Shop running at http://localhost:${PORT}`);
+        console.log(`ðŸš€ Cellphone Shop running at http://localhost:${PORT}`);
       });
     })
     .catch((error) => {
-      console.error("❌ Failed to connect to MongoDB:", error.message);
+      console.error("âŒ Failed to connect to MongoDB:", error.message);
       process.exit(1);
     });
 }
 
 export default app;
+
+

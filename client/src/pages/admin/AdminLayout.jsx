@@ -16,7 +16,7 @@ const AdminLayout = () => {
   }, [location.pathname]);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
+    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans">
       <AuthNavigationHandler />
       <AdminHeader onToggleSidebar={() => setIsSidebarOpen(true)} />
       <div className="flex pt-16">

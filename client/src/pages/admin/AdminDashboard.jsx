@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "react-hot-toast";
 
 import {
@@ -14,12 +14,24 @@ const formatCurrency = (value) =>
     maximumFractionDigits: 0,
   }).format(value);
 
+const formatPercent = (value) =>
+  new Intl.NumberFormat("vi-VN", {
+    maximumFractionDigits: 1,
+    minimumFractionDigits: value > 0 && value < 1 ? 1 : 0,
+  }).format(value ?? 0);
+
 const AdminDashboard = () => {
   const [stats, setStats] = useState({
     totalUsers: 0,
     totalProducts: 0,
     totalOrders: 0,
     totalRevenue: 0,
+    paymentBreakdown: {
+      cod: { revenue: 0, orders: 0 },
+      vietqr: { revenue: 0, orders: 0 },
+    },
+    revenueTimeline: [],
+    timelineRange: null,
   });
   const [latestProducts, setLatestProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -32,7 +44,20 @@ const AdminDashboard = () => {
           fetchLatestProducts(5),
         ]);
 
-        setStats(statsResponse.data.data || {});
+        const overviewData = statsResponse.data.data || {};
+
+        setStats((previous) => ({
+          ...previous,
+          ...overviewData,
+          paymentBreakdown: {
+            ...(previous.paymentBreakdown || {}),
+            ...(overviewData.paymentBreakdown || {}),
+          },
+          revenueTimeline:
+            overviewData.revenueTimeline ?? previous.revenueTimeline ?? [],
+          timelineRange:
+            overviewData.timelineRange ?? previous.timelineRange ?? null,
+        }));
         setLatestProducts(productsResponse.data.data || []);
       } catch (error) {
         toast.error("Không thể tải dữ liệu tổng quan");

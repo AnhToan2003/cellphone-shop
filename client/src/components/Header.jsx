@@ -256,6 +256,12 @@ const Header = () => {
                 >
                   <span>{isAdmin ? "Quản trị" : "Đơn hàng"}</span>
                 </Link>
+                <Link
+                  to="/warranty"
+                  className="hidden items-center gap-2 rounded-full border border-white/30 px-3 py-1.5 text-sm font-semibold transition hover:bg-white hover:text-brand-primary md:flex"
+                >
+                  <span>Bảo hành</span>
+                </Link>
                 <button
                   type="button"
                   onClick={logout}

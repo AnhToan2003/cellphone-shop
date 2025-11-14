@@ -107,4 +107,5 @@ Tất cả response tuân theo cấu trúc `{ success, message, data }`.
 ### Ghi chú
 
 - Zod được sử dụng để kiểm tra payload trước khi ghi dữ liệu vào MongoDB.  
-- React giao diện phong cách CellphoneS với grid responsive, skeleton loading và toast thông báo thân thiện.
+- React giao diện phong cách CellphoneS với grid responsive, skeleton loading và toast thông báo thân thiện.-
+taskkill /IM node.exe /F

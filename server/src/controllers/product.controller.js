@@ -332,14 +332,78 @@ export const uploadProduct = asyncHandler(async (req, res) => {
 const reviewInputSchema = z.object({
   rating: z.preprocess((val) => Number(val), z.number().min(1).max(5)),
   comment: z.string().optional().default(""),
+  orderId: z
+    .string()
+    .optional()
+    .transform((value) => {
+      if (!value) return undefined;
+      const trimmed = value.trim();
+      return trimmed.length ? trimmed : undefined;
+    }),
 });
 
-const hasPurchasedProduct = async (userId, productId) => {
-  return Order.exists({
+const REVIEWABLE_STATUSES = ["processing", "shipped", "delivered", "shipping"];
+
+const findEligibleOrderForReview = async ({ userId, productId, orderId }) => {
+  const orderFilter = {
     user: userId,
     "items.product": productId,
-    status: "delivered",
-  });
+    status: { $in: REVIEWABLE_STATUSES },
+  };
+
+  if (orderId) {
+    orderFilter._id = orderId;
+  }
+
+  const candidateOrders = await Order.find(orderFilter)
+    .select("_id status createdAt items")
+    .sort({ createdAt: -1 })
+    .lean();
+
+  if (!candidateOrders.length) {
+    return null;
+  }
+
+  const candidateIds = candidateOrders.map((order) => order._id);
+
+  const reviewedDocs = await Review.find({
+    user: userId,
+    product: productId,
+    order: { $in: candidateIds },
+  })
+    .select("order")
+    .lean();
+
+  const reviewedSet = new Set(
+    reviewedDocs
+      .map((doc) =>
+        doc.order && typeof doc.order.toString === "function"
+          ? doc.order.toString()
+          : doc.order?.toString?.() || doc.order
+      )
+      .filter(Boolean)
+  );
+
+  if (orderId) {
+    const targetOrder = candidateOrders.find(
+      (order) => order._id.toString() === orderId.toString()
+    );
+    if (!targetOrder) {
+      return null;
+    }
+
+    if (reviewedSet.has(targetOrder._id.toString())) {
+      return null;
+    }
+
+    return targetOrder;
+  }
+
+  return (
+    candidateOrders.find(
+      (order) => !reviewedSet.has(order._id.toString())
+    ) || null
+  );
 };
 
 export const getProductReviews = asyncHandler(async (req, res) => {
@@ -366,14 +430,11 @@ export const getProductReviews = asyncHandler(async (req, res) => {
 
   let canReview = false;
   if (req.user) {
-    const alreadyReviewed = await Review.exists({
-      user: req.user._id,
-      product: product._id,
+    const eligibleOrder = await findEligibleOrderForReview({
+      userId: req.user._id,
+      productId: product._id,
     });
-    if (!alreadyReviewed) {
-      const hasOrder = await hasPurchasedProduct(req.user._id, product._id);
-      canReview = Boolean(hasOrder);
-    }
+    canReview = Boolean(eligibleOrder);
   }
 
   res.json({
@@ -398,29 +459,25 @@ export const createProductReview = asyncHandler(async (req, res) => {
 
   const payload = reviewInputSchema.parse(req.body);
 
-  const alreadyReviewed = await Review.exists({
-    user: req.user._id,
-    product: product._id,
+  const eligibleOrder = await findEligibleOrderForReview({
+    userId: req.user._id,
+    productId: product._id,
+    orderId: payload.orderId,
   });
 
-  if (alreadyReviewed) {
+  if (!eligibleOrder) {
     return res.status(400).json({
       success: false,
-      message: "Bạn đã đánh giá sản phẩm này",
-    });
-  }
-
-  const hasOrder = await hasPurchasedProduct(req.user._id, product._id);
-  if (!hasOrder) {
-    return res.status(400).json({
-      success: false,
-      message: "Bạn cần mua sản phẩm trước khi đánh giá",
+      message: payload.orderId
+        ? "Đơn hàng không hợp lệ hoặc bạn đã đánh giá rồi"
+        : "Bạn cần mua sản phẩm trước khi đánh giá",
     });
   }
 
   const review = await Review.create({
     user: req.user._id,
     product: product._id,
+    order: eligibleOrder._id,
     rating: payload.rating,
     comment: payload.comment?.trim() || "",
   });

@@ -4,23 +4,135 @@ import { User } from "../models/User.js";
 
 export const getOverviewStats = async (req, res, next) => {
   try {
-    const [totalUsers, totalProducts, totalOrders, revenueResult] =
-      await Promise.all([
-        User.countDocuments(),
-        Product.countDocuments(),
-        Order.countDocuments(),
-        Order.aggregate([
-          {
-            $group: {
-              _id: null,
-              total: { $sum: "$totals.grand" },
-            },
+    const timelineDays = 14;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const startDate = new Date(today);
+    startDate.setDate(today.getDate() - (timelineDays - 1));
+
+    const [
+      totalUsers,
+      totalProducts,
+      totalOrders,
+      revenueResult,
+      paymentStats,
+      timelineStats,
+    ] = await Promise.all([
+      User.countDocuments(),
+      Product.countDocuments(),
+      Order.countDocuments(),
+      Order.aggregate([
+        {
+          $group: {
+            _id: null,
+            total: { $sum: "$totals.grand" },
           },
-        ]),
-      ]);
+        },
+      ]),
+      Order.aggregate([
+        {
+          $group: {
+            _id: "$paymentMethod",
+            revenue: { $sum: "$totals.grand" },
+            orders: { $sum: 1 },
+          },
+        },
+      ]),
+      Order.aggregate([
+        {
+          $match: {
+            createdAt: { $gte: startDate },
+          },
+        },
+        {
+          $group: {
+            _id: {
+              date: {
+                $dateToString: { format: "%Y-%m-%d", date: "$createdAt" },
+              },
+              method: "$paymentMethod",
+            },
+            revenue: { $sum: "$totals.grand" },
+            orders: { $sum: 1 },
+          },
+        },
+        {
+          $sort: { "_id.date": 1 },
+        },
+      ]),
+    ]);
 
     const totalRevenue =
       revenueResult.length > 0 ? revenueResult[0].total : 0;
+
+    const paymentBreakdown = paymentStats.reduce((acc, stat) => {
+      const key = stat._id || "unknown";
+      acc[key] = {
+        revenue: stat.revenue ?? 0,
+        orders: stat.orders ?? 0,
+      };
+      return acc;
+    }, {});
+
+    const timelineMap = timelineStats.reduce((acc, item) => {
+      const dateKey = item?._id?.date;
+      const methodKey = item?._id?.method || "unknown";
+
+      if (!dateKey) {
+        return acc;
+      }
+
+      if (!acc[dateKey]) {
+        acc[dateKey] = {
+          date: dateKey,
+          codRevenue: 0,
+          codOrders: 0,
+          vietqrRevenue: 0,
+          vietqrOrders: 0,
+          otherRevenue: 0,
+          otherOrders: 0,
+        };
+      }
+
+      const target = acc[dateKey];
+      const revenue = item.revenue ?? 0;
+      const orders = item.orders ?? 0;
+
+      if (methodKey === "cod") {
+        target.codRevenue += revenue;
+        target.codOrders += orders;
+      } else if (methodKey === "vietqr") {
+        target.vietqrRevenue += revenue;
+        target.vietqrOrders += orders;
+      } else {
+        target.otherRevenue += revenue;
+        target.otherOrders += orders;
+      }
+
+      return acc;
+    }, {});
+
+    const revenueTimeline = [];
+
+    for (let index = 0; index < timelineDays; index += 1) {
+      const cursor = new Date(startDate);
+      cursor.setDate(startDate.getDate() + index);
+
+      const dateKey = cursor.toISOString().slice(0, 10);
+      revenueTimeline.push(
+        timelineMap[dateKey] ?? {
+          date: dateKey,
+          codRevenue: 0,
+          codOrders: 0,
+          vietqrRevenue: 0,
+          vietqrOrders: 0,
+          otherRevenue: 0,
+          otherOrders: 0,
+        }
+      );
+    }
 
     res.json({
       success: true,
@@ -29,6 +141,12 @@ export const getOverviewStats = async (req, res, next) => {
         totalProducts,
         totalOrders,
         totalRevenue,
+        paymentBreakdown,
+        revenueTimeline,
+        timelineRange: {
+          start: startDate.toISOString(),
+          end: today.toISOString(),
+        },
       },
     });
   } catch (error) {

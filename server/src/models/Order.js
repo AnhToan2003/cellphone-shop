@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+﻿import mongoose from "mongoose";
 
 const orderItemSchema = new mongoose.Schema(
   {
@@ -77,6 +77,60 @@ const totalsSchema = new mongoose.Schema(
   { _id: false }
 );
 
+const paymentSchema = new mongoose.Schema(
+  {
+    provider: {
+      type: String,
+      default: "cod",
+      trim: true,
+    },
+    status: {
+      type: String,
+      enum: ["pending", "awaiting", "completed", "failed"],
+      default: "pending",
+    },
+    reference: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    message: {
+      type: String,
+      default: "",
+    },
+    confirmedAt: {
+      type: Date,
+      default: null,
+    },
+    qrData: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    transferContent: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    quickLink: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    transactionNo: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    bankCode: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+  },
+  { _id: false }
+);
+
 const orderSchema = new mongoose.Schema(
   {
     user: {
@@ -95,8 +149,16 @@ const orderSchema = new mongoose.Schema(
     },
     paymentMethod: {
       type: String,
-      enum: ["cod", "mock"],
+      enum: ["cod", "vietqr"],
       default: "cod",
+    },
+    payment: {
+      type: paymentSchema,
+      default: () => ({
+        provider: "cod",
+        status: "pending",
+        qrData: "",
+      }),
     },
     status: {
       type: String,
@@ -119,3 +181,9 @@ export const Order =
   mongoose.models.Order || mongoose.model("Order", orderSchema);
 
 export default Order;
+
+
+
+
+
+

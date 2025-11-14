@@ -1,4 +1,4 @@
-﻿import { z } from "zod";
+import { z } from "zod";
 
 import { Product, PRODUCT_BRANDS } from "../models/Product.js";
 
@@ -81,6 +81,27 @@ const parseVariantsFromBody = (rawVariants) => {
     .filter(Boolean);
 };
 
+const DEFAULT_WARRANTY_POLICY =
+  "Lỗi 1 đổi 1 trong 10 ngày. Bảo hành 12 tháng. Không bảo hành khi rơi vỡ hoặc vào nước.";
+
+const sanitizeWarrantyPolicy = (value) => {
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (trimmed.length) {
+      return trimmed;
+    }
+  }
+  return DEFAULT_WARRANTY_POLICY;
+};
+
+const sanitizeWarrantyMonths = (value) => {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric <= 0) {
+    return 12;
+  }
+  return Math.max(1, Math.min(Math.floor(numeric), 60));
+};
+
 const baseSchema = z.object({
   name: z.string().min(2, "Product name must contain at least 2 characters"),
   brand: z
@@ -94,6 +115,8 @@ const baseSchema = z.object({
   oldPrice: z.number().nonnegative().optional(),
   stock: z.number().int().min(0).optional(),
   description: z.string().optional(),
+  warrantyPolicy: z.string().max(1024).optional(),
+  warrantyMonths: z.number().int().min(1).max(60).optional(),
 });
 
 const createSchema = baseSchema.extend({
@@ -128,6 +151,12 @@ const applyProductPayload = (product, payload, extras = {}) => {
   }
   if (payload.description !== undefined) {
     product.description = payload.description ?? "";
+  }
+  if (payload.warrantyPolicy !== undefined) {
+    product.warrantyPolicy = sanitizeWarrantyPolicy(payload.warrantyPolicy);
+  }
+  if (payload.warrantyMonths !== undefined) {
+    product.warrantyMonths = sanitizeWarrantyMonths(payload.warrantyMonths);
   }
   if (payload.stock !== undefined) {
     product.stock = payload.stock ?? 0;
@@ -171,6 +200,7 @@ export const adminCreateProduct = asyncHandler(async (req, res) => {
     price: Number(req.body.price),
     oldPrice: numberOrUndefined(req.body.oldPrice),
     stock: numberOrUndefined(req.body.stock),
+    warrantyMonths: numberOrUndefined(req.body.warrantyMonths),
   });
 
   const options = parseOptionsFromBody(req.body);
@@ -183,6 +213,8 @@ export const adminCreateProduct = asyncHandler(async (req, res) => {
     oldPrice: payload.oldPrice ?? null,
     stock: payload.stock ?? 0,
     description: payload.description ?? "",
+    warrantyPolicy: sanitizeWarrantyPolicy(payload.warrantyPolicy),
+    warrantyMonths: sanitizeWarrantyMonths(payload.warrantyMonths),
     imageUrl: payload.imageUrl,
     images: [payload.imageUrl],
     options,
@@ -202,6 +234,7 @@ export const adminUpdateProduct = asyncHandler(async (req, res) => {
     price: numberOrUndefined(req.body.price),
     oldPrice: numberOrUndefined(req.body.oldPrice),
     stock: numberOrUndefined(req.body.stock),
+    warrantyMonths: numberOrUndefined(req.body.warrantyMonths),
   });
 
   const product = await Product.findById(req.params.id);
@@ -272,4 +305,3 @@ export const adminUploadProductImage = asyncHandler(async (req, res) => {
     data: { imageUrl },
   });
 });
-
