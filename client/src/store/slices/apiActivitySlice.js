@@ -27,6 +27,11 @@ const apiActivitySlice = createSlice({
   name: "apiActivity",
   initialState,
   reducers: {
+    setActivities(state, { payload }) {
+      state.items = Array.isArray(payload)
+        ? payload.slice(0, state.maxItems)
+        : [];
+    },
     addActivity(state, { payload }) {
       state.items.unshift(payload);
       if (state.items.length > state.maxItems) {
@@ -39,5 +44,6 @@ const apiActivitySlice = createSlice({
   },
 });
 
-export const { addActivity, clearActivities } = apiActivitySlice.actions;
+export const { addActivity, clearActivities, setActivities } =
+  apiActivitySlice.actions;
 export default apiActivitySlice.reducer;

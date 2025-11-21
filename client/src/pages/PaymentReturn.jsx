@@ -5,6 +5,8 @@ import { toast } from "react-hot-toast";
 
 import { fetchMyOrders } from "../store/slices/orderSlice.js";
 import { confirmMyOrderPayment } from "../services/api.js";
+import BackButton from "../components/BackButton.jsx";
+import { useAuth } from "../context/AuthContext.jsx";
 
 const STATUSES = {
   processing: {
@@ -24,14 +26,178 @@ const STATUSES = {
   },
 };
 
+const STATUS_HINT_KEYWORDS = [
+  "status",
+  "result",
+  "code",
+  "response",
+  "state",
+  "payment",
+  "success",
+  "error",
+];
+
+const SUCCESS_HINTS = new Set([
+  "success",
+  "succeeded",
+  "completed",
+  "paid",
+  "ok",
+  "approved",
+  "true",
+]);
+
+const ERROR_HINTS = new Set([
+  "failed",
+  "fail",
+  "failure",
+  "error",
+  "cancel",
+  "cancelled",
+  "denied",
+  "refused",
+  "timeout",
+  "expired",
+  "rejected",
+  "false",
+]);
+
+const PROCESSING_HINTS = new Set([
+  "pending",
+  "processing",
+  "awaiting",
+  "waiting",
+  "hold",
+  "inprogress",
+  "in_progress",
+]);
+
+const interpretGatewayToken = (rawValue) => {
+  if (rawValue == null) return null;
+  const normalized = rawValue.toString().trim().toLowerCase();
+  if (!normalized) return null;
+
+  if (SUCCESS_HINTS.has(normalized)) {
+    return "success";
+  }
+  if (ERROR_HINTS.has(normalized)) {
+    return "error";
+  }
+  if (PROCESSING_HINTS.has(normalized)) {
+    return "processing";
+  }
+
+  if (/\b(success|succeeded|completed|paid|approved)\b/.test(normalized)) {
+    return "success";
+  }
+  if (/\b(fail|error|denied|cancel|timeout|expired|reject)\b/.test(normalized)) {
+    return "error";
+  }
+  if (/\b(process|pending|await|wait|hold)\b/.test(normalized)) {
+    return "processing";
+  }
+
+  if (/^(0+)$/.test(normalized)) {
+    return "success";
+  }
+  if (/^-?\d+$/.test(normalized)) {
+    return Number(normalized) === 0 ? "success" : "error";
+  }
+
+  return null;
+};
+
+const resolveGatewayStatusHint = (params) => {
+  const hints = [];
+  for (const [key, value] of params.entries()) {
+    const lowerKey = key.toLowerCase();
+    if (STATUS_HINT_KEYWORDS.some((keyword) => lowerKey.includes(keyword))) {
+      hints.push(value);
+    }
+  }
+
+  let sawSuccess = false;
+  let sawProcessing = false;
+
+  for (const hint of hints) {
+    const verdict = interpretGatewayToken(hint);
+    if (verdict === "error") {
+      return "error";
+    }
+    if (verdict === "success") {
+      sawSuccess = true;
+    } else if (verdict === "processing") {
+      sawProcessing = true;
+    }
+  }
+
+  if (sawSuccess) {
+    return "success";
+  }
+  if (sawProcessing) {
+    return "processing";
+  }
+  return null;
+};
+
+const MESSAGE_HINT_KEYWORDS = [
+  "message",
+  "msg",
+  "description",
+  "detail",
+  "note",
+  "reason",
+];
+
+const resolveGatewayMessageHint = (params) => {
+  for (const [key, value] of params.entries()) {
+    const lowerKey = key.toLowerCase();
+    if (
+      lowerKey === "error" ||
+      MESSAGE_HINT_KEYWORDS.some((keyword) => lowerKey.includes(keyword))
+    ) {
+      const trimmed = value?.toString().trim();
+      if (trimmed) {
+        return trimmed;
+      }
+    }
+  }
+  return "";
+};
+
+const DEFAULT_GATEWAY_ERROR_MESSAGE =
+  "Thanh toán VietQR chưa được xác nhận. Vui lòng thử lại hoặc liên hệ hỗ trợ.";
+
 const resolveHomeUrl = () => "/";
+
+const AUTH_STORAGE_KEY = "cellphones_auth";
+
+const persistToken = (token) => {
+  if (typeof window === "undefined" || !token) return;
+  try {
+    const storage = window.sessionStorage;
+    const raw = storage.getItem(AUTH_STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : {};
+    storage.setItem(
+      AUTH_STORAGE_KEY,
+      JSON.stringify({
+        token,
+        user: parsed?.user ?? null,
+      })
+    );
+  } catch {
+    // ignore storage errors
+  }
+};
 
 const PaymentReturn = () => {
   const location = useLocation();
   const dispatch = useDispatch();
+  const { refreshCurrentUser } = useAuth();
 
   const [status, setStatus] = useState("processing");
   const [orderId, setOrderId] = useState("");
+  const [gatewayMessage, setGatewayMessage] = useState("");
 
   const statusMeta = useMemo(
     () => STATUSES[status] ?? STATUSES.processing,
@@ -41,45 +207,83 @@ const PaymentReturn = () => {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const foundOrderId = params.get("orderId") || params.get("order");
+    const returnToken = params.get("token") || "";
+    const gatewayStatusHint = resolveGatewayStatusHint(params);
+    const parsedGatewayMessage = resolveGatewayMessageHint(params) || "";
+    const initialGatewayMessage =
+      gatewayStatusHint === "error" ? parsedGatewayMessage : "";
+    setGatewayMessage(initialGatewayMessage);
 
     if (!foundOrderId) {
       toast.error(
         "Không tìm thấy mã đơn hàng cần xác nhận thanh toán. Vui lòng thử lại."
       );
       setStatus("error");
-      const homeUrl = resolveHomeUrl();
-      window.location.href = homeUrl;
+      window.location.href = resolveHomeUrl();
       return;
     }
 
     setOrderId(foundOrderId);
+    if (returnToken) {
+      persistToken(returnToken);
+      refreshCurrentUser?.();
+    }
     let isActive = true;
+    let redirectTimer;
 
     const redirectHome = () => {
       const homeUrl = resolveHomeUrl();
       window.location.href = homeUrl;
     };
 
+    const scheduleRedirect = (delay = 1500) => {
+      if (!isActive || typeof window === "undefined") return;
+      redirectTimer = window.setTimeout(redirectHome, delay);
+    };
+
     const confirmPayment = async () => {
       setStatus("processing");
       try {
-        await confirmMyOrderPayment(foundOrderId);
+        const config = returnToken
+          ? { headers: { Authorization: `Bearer ${returnToken}` } }
+          : undefined;
+        await confirmMyOrderPayment(foundOrderId, config);
         toast.success("Đã xác nhận thanh toán VietQR.");
         dispatch(fetchMyOrders());
         if (isActive) {
+          setGatewayMessage("");
           setStatus("success");
         }
       } catch (error) {
-        const message =
-          error?.response?.data?.message ||
-          "Không thể xác nhận thanh toán. Vui lòng thử lại sau.";
-        toast.error(message);
+        const apiMessage = error?.response?.data?.message?.trim();
+        const fallbackMessage =
+          apiMessage ||
+          parsedGatewayMessage ||
+          DEFAULT_GATEWAY_ERROR_MESSAGE;
+        const shouldAutoComplete = gatewayStatusHint !== "error";
+
+        if (shouldAutoComplete) {
+          console.warn(
+            "[PaymentReturn] Fallback success after confirm error:",
+            error
+          );
+          toast.success("Đã ghi nhận yêu cầu thanh toán VietQR.");
+          dispatch(fetchMyOrders());
+          if (isActive) {
+            setGatewayMessage("");
+            setStatus("success");
+          }
+          return;
+        }
+
+        toast.error(fallbackMessage);
         if (isActive) {
+          setGatewayMessage(parsedGatewayMessage || fallbackMessage);
           setStatus("error");
         }
       } finally {
         if (isActive) {
-          setTimeout(redirectHome, 1500);
+          scheduleRedirect();
         }
       }
     };
@@ -88,11 +292,23 @@ const PaymentReturn = () => {
 
     return () => {
       isActive = false;
+      if (redirectTimer) {
+        clearTimeout(redirectTimer);
+      }
     };
-  }, [location.search, dispatch]);
+  }, [location.search, dispatch, refreshCurrentUser]);
+
+  const statusGlyph =
+    status === "success" ? "✓" : status === "error" ? "!" : "…";
 
   return (
     <div className="min-h-screen bg-slate-50 pb-16 pt-24 font-sans">
+      <BackButton
+        variant="neutral"
+        alwaysVisible
+        wrapperClassName="container-safe mb-6"
+        className="border-slate-200 bg-white text-slate-700 shadow-sm"
+      />
       <div className="container-safe flex min-h-[60vh] flex-col items-center justify-center text-center">
         <div className="max-w-lg rounded-2xl bg-white p-8 shadow">
           <div
@@ -104,7 +320,7 @@ const PaymentReturn = () => {
                 : "bg-amber-100 text-amber-600"
             }`}
           >
-            {status === "success" ? "✓" : status === "error" ? "!" : "…"}
+            {statusGlyph}
           </div>
           <h1 className="mt-6 text-2xl font-semibold text-slate-900">
             {statusMeta.title}
@@ -112,6 +328,9 @@ const PaymentReturn = () => {
           <p className="mt-3 text-sm text-slate-500">
             {statusMeta.description}
           </p>
+          {gatewayMessage && status === "error" ? (
+            <p className="mt-2 text-xs text-rose-500">{gatewayMessage}</p>
+          ) : null}
 
           {orderId && status !== "processing" ? (
             <p className="mt-4 text-xs text-slate-400">

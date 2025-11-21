@@ -1,5 +1,20 @@
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "react-hot-toast";
+import {
+  ResponsiveContainer,
+  ComposedChart,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+  Tooltip,
+  Legend,
+  Bar,
+  Line,
+  PieChart,
+  Pie,
+  Cell,
+  BarChart,
+} from "recharts";
 
 import {
   fetchAdminOverview,
@@ -7,18 +22,22 @@ import {
 } from "../../services/api.js";
 import { getAssetUrl } from "../../utils/assets.js";
 
-const formatCurrency = (value) =>
+const METHOD_LABELS = {
+  vietqr: "Chuyển khoản VietQR",
+  cod: "Thanh toán khi nhận hàng (COD)",
+};
+
+const formatCurrency = (value = 0) =>
   new Intl.NumberFormat("vi-VN", {
     style: "currency",
     currency: "VND",
     maximumFractionDigits: 0,
-  }).format(value);
+  }).format(Number.isFinite(value) ? value : 0);
 
-const formatPercent = (value) =>
+const formatInteger = (value = 0) =>
   new Intl.NumberFormat("vi-VN", {
-    maximumFractionDigits: 1,
-    minimumFractionDigits: value > 0 && value < 1 ? 1 : 0,
-  }).format(value ?? 0);
+    maximumFractionDigits: 0,
+  }).format(Number.isFinite(value) ? value : 0);
 
 const AdminDashboard = () => {
   const [stats, setStats] = useState({
@@ -26,70 +45,128 @@ const AdminDashboard = () => {
     totalProducts: 0,
     totalOrders: 0,
     totalRevenue: 0,
+    totalProfit: 0,
     paymentBreakdown: {
-      cod: { revenue: 0, orders: 0 },
-      vietqr: { revenue: 0, orders: 0 },
+      cod: { revenue: 0, orders: 0, profit: 0 },
+      vietqr: { revenue: 0, orders: 0, profit: 0 },
     },
     revenueTimeline: [],
     timelineRange: null,
+    topProducts: [],
   });
   const [latestProducts, setLatestProducts] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const loadDashboard = async () => {
+    const load = async () => {
       try {
-        const [statsResponse, productsResponse] = await Promise.all([
+        const [overviewRes, productsRes] = await Promise.all([
           fetchAdminOverview(),
           fetchLatestProducts(5),
         ]);
-
-        const overviewData = statsResponse.data.data || {};
-
-        setStats((previous) => ({
-          ...previous,
-          ...overviewData,
-          paymentBreakdown: {
-            ...(previous.paymentBreakdown || {}),
-            ...(overviewData.paymentBreakdown || {}),
-          },
-          revenueTimeline:
-            overviewData.revenueTimeline ?? previous.revenueTimeline ?? [],
-          timelineRange:
-            overviewData.timelineRange ?? previous.timelineRange ?? null,
+        const overview = overviewRes.data?.data ?? {};
+        setStats((prev) => ({
+          ...prev,
+          ...overview,
+          paymentBreakdown: overview.paymentBreakdown ?? prev.paymentBreakdown,
+          revenueTimeline: overview.revenueTimeline ?? [],
+          topProducts: overview.topProducts ?? [],
+          timelineRange: overview.timelineRange ?? null,
         }));
-        setLatestProducts(productsResponse.data.data || []);
+        setLatestProducts(productsRes.data?.data ?? []);
       } catch (error) {
-        toast.error("Không thể tải dữ liệu tổng quan");
+        toast.error("Không thể tải dữ liệu bảng thống kê.");
       } finally {
         setLoading(false);
       }
     };
 
-    loadDashboard();
+    load();
   }, []);
 
-  const cards = [
+  const paymentOverview = useMemo(() => {
+    const breakdown = stats.paymentBreakdown ?? {};
+    return Object.keys(METHOD_LABELS).map((key) => ({
+      key,
+      label: METHOD_LABELS[key],
+      revenue: breakdown[key]?.revenue ?? 0,
+      orders: breakdown[key]?.orders ?? 0,
+      profit: breakdown[key]?.profit ?? 0,
+    }));
+  }, [stats.paymentBreakdown]);
+
+  const timelineData = useMemo(() => {
+    const series = stats.revenueTimeline ?? [];
+    return series.map((entry) => {
+      const cod = entry.cod || {};
+      const vietqr = entry.vietqr || {};
+      const totalRevenue = (cod.revenue ?? 0) + (vietqr.revenue ?? 0);
+      const totalProfit = (cod.profit ?? 0) + (vietqr.profit ?? 0);
+
+      return {
+        date: new Date(entry.date).toLocaleDateString("vi-VN", {
+          day: "2-digit",
+          month: "2-digit",
+        }),
+        codRevenue: cod.revenue ?? 0,
+        vietqrRevenue: vietqr.revenue ?? 0,
+        totalRevenue,
+        totalProfit,
+      };
+    });
+  }, [stats.revenueTimeline]);
+
+  const stackedRevenueData = useMemo(
+    () =>
+      timelineData.map((point) => ({
+        date: point.date,
+        cod: point.codRevenue ?? 0,
+        vietqr: point.vietqrRevenue ?? 0,
+      })),
+    [timelineData]
+  );
+
+  const topProductData = useMemo(
+    () =>
+      (stats.topProducts ?? []).map((item) => ({
+        name: item.name || "Sản phẩm",
+        value: item.totalQuantity ?? 0,
+        revenue: item.saleRevenue ?? item.totalRevenue ?? 0,
+        listedRevenue: item.listedRevenue ?? 0,
+        profit: item.totalProfit ?? 0,
+      })),
+    [stats.topProducts]
+  );
+
+  const summaryCards = [
     {
-      label: "Doanh thu (ước tính)",
-      value: stats.totalRevenue ?? 0,
+      label: "Tổng doanh thu",
+      value: loading ? "..." : formatCurrency(stats.totalRevenue),
       highlight: "text-rose-400",
-      formatter: formatCurrency,
     },
     {
-      label: "Tổng đơn hàng",
-      value: stats.totalOrders ?? 0,
+      label: "Tổng lợi nhuận",
+      value: loading ? "..." : formatCurrency(stats.totalProfit),
+      highlight: "text-emerald-400",
+    },
+    {
+      label: "Biên lợi nhuận",
+      value: loading
+        ? "..."
+        : stats.totalRevenue > 0
+        ? `${((stats.totalProfit / stats.totalRevenue) * 100).toFixed(1)}%`
+        : "0%",
+      highlight: "text-purple-400",
+    },
+    {
+      label: "Tổng số đơn",
+      value: loading ? "..." : formatInteger(stats.totalOrders),
       highlight: "text-amber-400",
     },
     {
       label: "Sản phẩm đang bán",
-      value: stats.totalProducts ?? 0,
+      value: loading ? "..." : formatInteger(stats.totalProducts),
       highlight: "text-sky-400",
-    },
-    {
-      label: "Người dùng đã đăng ký",
-      value: stats.totalUsers ?? 0,
-      highlight: "text-emerald-400",
     },
   ];
 
@@ -100,15 +177,16 @@ const AdminDashboard = () => {
           Tổng quan
         </p>
         <h1 className="text-3xl font-semibold text-white">
-          Thống kê doanh thu
+          Tóm tắt doanh thu & lợi nhuận
         </h1>
         <p className="max-w-2xl text-sm text-slate-400">
-          Theo dõi hiệu suất bán hàng, số lượng đơn và sản phẩm mới cập nhật để tối ưu vận hành cửa hàng.
+          Theo dõi hiệu quả từng phương thức thanh toán, biên lợi nhuận và các
+          sản phẩm nổi bật mới nhất trong cửa hàng.
         </p>
       </header>
 
       <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-        {cards.map((card) => (
+        {summaryCards.map((card) => (
           <div
             key={card.label}
             className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 shadow-lg shadow-slate-950/50"
@@ -117,27 +195,198 @@ const AdminDashboard = () => {
               {card.label}
             </p>
             <p className={`mt-4 text-3xl font-semibold ${card.highlight}`}>
-              {loading
-                ? "..."
-                : card.formatter
-                ? card.formatter(card.value)
-                : card.value}
+              {card.value}
             </p>
           </div>
         ))}
       </div>
 
       <section className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 shadow-lg shadow-slate-950/50">
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <h2 className="text-xl font-semibold text-white">
-              Sản phẩm mới cập nhật
-            </h2>
-            <p className="text-sm text-slate-400">
-              Danh sách 5 sản phẩm vừa được thêm gần đây.
-            </p>
+        <h2 className="text-xl font-semibold text-white">
+          Doanh thu theo phương thức thanh toán
+        </h2>
+        <p className="text-sm text-slate-400">
+          So sánh doanh thu, số đơn và lợi nhuận của từng phương thức thanh toán.
+        </p>
+
+        <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {paymentOverview.map((method) => (
+            <div
+              key={method.key}
+              className="rounded-xl border border-slate-800 bg-slate-900/70 px-5 py-4"
+            >
+              <p className="text-xs uppercase tracking-widest text-slate-500">
+                {method.label}
+              </p>
+              <p className="mt-2 text-lg font-semibold text-white">
+                {loading ? "..." : formatCurrency(method.revenue)}
+              </p>
+              <div className="mt-3 flex items-center justify-between text-xs text-slate-400">
+                <span>Đơn hàng</span>
+                <span className="font-medium text-slate-200">
+                  {loading ? "..." : formatInteger(method.orders)}
+                </span>
+              </div>
+              <div className="mt-1 flex items-center justify-between text-xs text-slate-400">
+                <span>Lợi nhuận</span>
+                <span className="font-medium text-emerald-300">
+                  {loading ? "..." : formatCurrency(method.profit)}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="grid gap-6 2xl:grid-cols-2">
+        <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 shadow-lg shadow-slate-950/50">
+          <h2 className="text-xl font-semibold text-white">
+            Doanh thu & lợi nhuận theo thời gian
+          </h2>
+          <p className="text-sm text-slate-400">
+            Các cột hiển thị doanh thu COD và VietQR theo ngày; đường biểu diễn thể hiện lợi nhuận.
+          </p>
+
+          <div className="mt-6 h-[420px]">
+            {timelineData.length === 0 ? (
+              <div className="flex h-full items-center justify-center text-sm text-slate-500">
+                {loading ? "Đang tải dữ liệu..." : "Chưa có dữ liệu doanh thu."}
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <ComposedChart
+                  data={timelineData}
+                  margin={{ top: 20, right: 30, left: 0, bottom: 20 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                  <XAxis dataKey="date" stroke="#94a3b8" />
+                  <YAxis
+                    yAxisId="left"
+                    stroke="#94a3b8"
+                    tickFormatter={formatCurrency}
+                  />
+                  <YAxis
+                    yAxisId="right"
+                    orientation="right"
+                    stroke="#94a3b8"
+                    tickFormatter={formatCurrency}
+                  />
+                  <Tooltip
+                    formatter={(value) => formatCurrency(value ?? 0)}
+                    contentStyle={{
+                      background: "#0f172a",
+                      border: "1px solid #1e293b",
+                      borderRadius: "12px",
+                      color: "#e2e8f0",
+                    }}
+                  />
+                  <Legend />
+                  <Bar
+                    yAxisId="left"
+                    dataKey="codRevenue"
+                    name="Doanh thu COD"
+                    fill="#f97316"
+                    radius={[8, 8, 0, 0]}
+                  />
+                  <Bar
+                    yAxisId="left"
+                    dataKey="vietqrRevenue"
+                    name="Doanh thu VietQR"
+                    fill="#22c55e"
+                    radius={[8, 8, 0, 0]}
+                  />
+                  <Line
+                    yAxisId="right"
+                    type="monotone"
+                    dataKey="totalProfit"
+                    name="Lợi nhuận"
+                    stroke="#38bdf8"
+                    strokeWidth={2}
+                    dot={{ stroke: "#38bdf8", strokeWidth: 2, r: 4 }}
+                    activeDot={{ r: 6, strokeWidth: 0 }}
+                  />
+                </ComposedChart>
+              </ResponsiveContainer>
+            )}
           </div>
         </div>
+
+        <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 shadow-lg shadow-slate-950/50">
+          <h2 className="text-xl font-semibold text-white">
+            Tỷ trọng số lượng & lợi nhuận
+          </h2>
+          <p className="text-sm text-slate-400">
+            Hiển thị mức đóng góp của các sản phẩm bán chạy vào sản lượng và
+            lợi nhuận.
+          </p>
+
+          <div className="mt-6 h-[420px]">
+            {topProductData.length === 0 ? (
+              <div className="flex h-full items-center justify-center text-sm text-slate-500">
+                {loading ? "Đang tải dữ liệu..." : "Chưa có thống kê sản phẩm."}
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={topProductData}
+                    dataKey="value"
+                    nameKey="name"
+                    innerRadius={80}
+                    outerRadius={150}
+                    paddingAngle={3}
+                    stroke="#0f172a"
+                    strokeWidth={2}
+                  >
+                    {topProductData.map((entry, index) => (
+                      <Cell
+                        key={entry.name}
+                        fill={["#22c55e", "#0ea5e9", "#f97316", "#a855f7", "#f973ab"][index % 5]}
+                      />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    formatter={(value) => [
+                      `${formatInteger(value)} sản phẩm`,
+                      "Số lượng",
+                    ]}
+                    labelFormatter={(label, payload) => {
+                      const item = payload?.[0]?.payload;
+                      return `${label} - Doanh thu: ${formatCurrency(
+                        item?.revenue ?? 0
+                      )} - Giá niêm yết: ${formatCurrency(
+                        item?.listedRevenue ?? 0
+                      )} - Lợi nhuận: ${formatCurrency(item?.profit ?? 0)}`;
+                    }}
+                    contentStyle={{
+                      background: "#0f172a",
+                      border: "1px solid #1e293b",
+                      borderRadius: "12px",
+                      color: "#e2e8f0",
+                    }}
+                  />
+                  <Legend
+                    layout="vertical"
+                    align="right"
+                    verticalAlign="middle"
+                    formatter={(value) => (
+                      <span className="text-sm text-slate-200">{value}</span>
+                    )}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 shadow-lg shadow-slate-950/50">
+        <h2 className="text-xl font-semibold text-white">
+          Sản phẩm mới nhất
+        </h2>
+        <p className="text-sm text-slate-400">
+          Năm sản phẩm vừa được thêm vào danh mục.
+        </p>
 
         <div className="mt-6 overflow-x-auto">
           <table className="min-w-full divide-y divide-slate-800 text-sm">
@@ -192,7 +441,7 @@ const AdminDashboard = () => {
                       </div>
                     </td>
                     <td className="px-4 py-4 text-slate-400">
-                      {product.brand || "Không rõ"}
+                      {product.brand || "Chưa rõ"}
                     </td>
                     <td className="px-4 py-4 text-right font-semibold text-slate-100">
                       {formatCurrency(product.finalPrice ?? product.price ?? 0)}
@@ -208,12 +457,64 @@ const AdminDashboard = () => {
                     colSpan={4}
                     className="px-4 py-6 text-center text-slate-400"
                   >
-                    Không tìm thấy sản phẩm gần đây.
+                    Chưa có sản phẩm mới.
                   </td>
                 </tr>
               )}
             </tbody>
           </table>
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 shadow-lg shadow-slate-950/50">
+        <h2 className="text-xl font-semibold text-white">
+          Phân rã doanh thu theo ngày
+        </h2>
+        <p className="text-sm text-slate-400">
+          Biểu đồ cột thể hiện doanh thu COD và VietQR theo từng ngày.
+        </p>
+
+        <div className="mt-6 h-80">
+          {stackedRevenueData.length === 0 ? (
+            <div className="flex h-full items-center justify-center text-sm text-slate-500">
+              {loading ? "Đang tải dữ liệu..." : "Chưa có dữ liệu doanh thu."}
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={stackedRevenueData}
+                margin={{ top: 10, right: 20, bottom: 10, left: 0 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                <XAxis dataKey="date" stroke="#94a3b8" />
+                <YAxis stroke="#94a3b8" tickFormatter={formatCurrency} />
+                <Tooltip
+                  formatter={(value) => formatCurrency(value ?? 0)}
+                  contentStyle={{
+                    background: "#0f172a",
+                    border: "1px solid #1e293b",
+                    borderRadius: "12px",
+                    color: "#e2e8f0",
+                  }}
+                />
+                <Legend />
+                <Bar
+                  dataKey="cod"
+                  name="COD"
+                  stackId="revenue"
+                  fill="#f97316"
+                  radius={[6, 6, 0, 0]}
+                />
+                <Bar
+                  dataKey="vietqr"
+                  name="VietQR"
+                  stackId="revenue"
+                  fill="#22c55e"
+                  radius={[6, 6, 0, 0]}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
         </div>
       </section>
     </div>

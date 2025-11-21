@@ -184,13 +184,16 @@ const populateOrder = (query) =>
 export const createOrder = asyncHandler(async (req, res) => {
   const payload = orderSchema.parse(req.body);
 
-  const productIds = payload.items.map((item) => item.productId);
-  const products = await Product.find({ _id: { $in: productIds } });
+  const productIds = payload.items.map((item) =>
+    item.productId ? item.productId.toString() : ""
+  );
+  const uniqueIds = Array.from(new Set(productIds.filter(Boolean)));
+  const products = await Product.find({ _id: { $in: uniqueIds } });
   const productMap = new Map(
     products.map((product) => [product._id.toString(), product])
   );
 
-  if (productMap.size !== productIds.length) {
+  if (productMap.size !== uniqueIds.length) {
     return res.status(400).json({
       success: false,
       message: "One or more products do not exist",
@@ -223,6 +226,12 @@ export const createOrder = asyncHandler(async (req, res) => {
       customerTier,
     });
     const price = pricing.finalPrice;
+    const rawListedPrice =
+      typeof product.oldPrice === "number" ? product.oldPrice : Number(product.oldPrice);
+    const listedPrice =
+      Number.isFinite(rawListedPrice) && rawListedPrice > 0
+        ? rawListedPrice
+        : price;
     const lineTotal = price * item.quantity;
     itemsTotal += lineTotal;
 
@@ -233,6 +242,7 @@ export const createOrder = asyncHandler(async (req, res) => {
       product: product._id,
       name: product.name,
       price,
+      listedPrice,
       quantity: item.quantity,
       image: product.images?.[0] || "",
       color: item.color || "",

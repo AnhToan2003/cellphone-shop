@@ -6,6 +6,7 @@ import {
 } from "../../context/AuthContext.jsx";
 import AdminHeader from "../../components/AdminHeader.jsx";
 import AdminSidebar from "../../components/AdminSidebar.jsx";
+import BackButton from "../../components/BackButton.jsx";
 
 const AdminLayout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -25,6 +26,12 @@ const AdminLayout = () => {
           onClose={() => setIsSidebarOpen(false)}
         />
         <main className="flex-1 px-4 pt-12 pb-10 lg:ml-60 lg:px-10">
+          <BackButton
+            fallback="/admin"
+            variant="dark"
+            wrapperClassName="mb-6"
+            className="border-slate-800 bg-slate-900/70 text-slate-100"
+          />
           <div className="mx-auto max-w-6xl space-y-8 pb-10">
             <Outlet />
           </div>

@@ -8,6 +8,7 @@ import {
   AuthNavigationHandler,
   useAuth,
 } from "./context/AuthContext.jsx";
+import SupportChatbox from "./components/SupportChatbox.jsx"; // ⭐ THÊM
 
 const PublicLayout = () => {
   const location = useLocation();
@@ -31,6 +32,9 @@ const PublicLayout = () => {
         <Outlet />
       </main>
       <Footer />
+
+      <SupportChatbox /> {/* ⭐ THÊM: chatbox hiển thị ở mọi trang */}
+
       <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
     </div>
   );

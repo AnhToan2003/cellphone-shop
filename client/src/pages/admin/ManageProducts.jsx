@@ -4,6 +4,7 @@ import { toast } from "react-hot-toast";
 import {
   createAdminProduct,
   deleteAdminProduct,
+  fetchAdminBrands,
   fetchAdminProducts,
   updateAdminProduct,
   uploadAdminProductImage,
@@ -49,14 +50,18 @@ const formatCurrency = (value) =>
 const ManageProducts = () => {
   const [products, setProducts] = useState([]);
   const [form, setForm] = useState(initialForm);
+  const [gallery, setGallery] = useState([]);
+  const [galleryUploading, setGalleryUploading] = useState(false);
   const [variantPrices, setVariantPrices] = useState({});
-  const [file, setFile] = useState(null);
-  const [preview, setPreview] = useState(null);
+  const [variantImages, setVariantImages] = useState({});
+  const [variantUploading, setVariantUploading] = useState({});
   const [editingId, setEditingId] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [deletingId, setDeletingId] = useState(null);
-  const fileInputRef = useRef(null);
+  const [brands, setBrands] = useState([]);
+  const [brandsLoading, setBrandsLoading] = useState(false);
+  const galleryInputRef = useRef(null);
 
   const loadProducts = async () => {
     try {
@@ -74,6 +79,24 @@ const ManageProducts = () => {
     loadProducts();
   }, []);
 
+  useEffect(() => {
+    const loadBrands = async () => {
+      try {
+        setBrandsLoading(true);
+        const response = await fetchAdminBrands();
+        setBrands(
+          Array.isArray(response.data?.data) ? response.data.data : []
+        );
+      } catch (error) {
+        toast.error("Không thể tải danh sách thương hiệu.");
+      } finally {
+        setBrandsLoading(false);
+      }
+    };
+
+    loadBrands();
+  }, []);
+
   const colorList = useMemo(
     () => splitInputList(form.colors),
     [form.colors]
@@ -81,6 +104,32 @@ const ManageProducts = () => {
   const capacityList = useMemo(
     () => splitInputList(form.capacities),
     [form.capacities]
+  );
+
+  const brandOptions = useMemo(() => {
+    const items = Array.isArray(brands) ? brands : [];
+    if (form.brand) {
+      const exists = items.some(
+        (brand) =>
+          (brand.name || "").toLowerCase() === form.brand.toLowerCase()
+      );
+      if (!exists) {
+        return [...items, { _id: "custom-brand", name: form.brand }];
+      }
+    }
+    return items;
+  }, [brands, form.brand]);
+
+  const sortedBrands = useMemo(
+    () =>
+      [...brandOptions].sort((a, b) => {
+        const orderDiff = (a.order ?? 0) - (b.order ?? 0);
+        if (orderDiff !== 0) {
+          return orderDiff;
+        }
+        return (a.name || "").localeCompare(b.name || "");
+      }),
+    [brandOptions]
   );
 
   const variantMatrix = useMemo(() => {
@@ -143,6 +192,32 @@ const ManageProducts = () => {
     });
   }, [variantMatrix, form.price]);
 
+  useEffect(() => {
+    if (!variantMatrix.length) {
+      setVariantImages((prev) => (Object.keys(prev).length ? {} : prev));
+      setVariantUploading({});
+      return;
+    }
+    setVariantImages((prev) => {
+      const next = {};
+      let changed = false;
+      variantMatrix.forEach(({ key }) => {
+        if (Object.prototype.hasOwnProperty.call(prev, key)) {
+          next[key] = prev[key];
+        } else {
+          next[key] = [];
+          changed = true;
+        }
+      });
+      Object.keys(prev).forEach((key) => {
+        if (!Object.prototype.hasOwnProperty.call(next, key)) {
+          changed = true;
+        }
+      });
+      return changed ? next : prev;
+    });
+  }, [variantMatrix]);
+
   const handleChange = (event) => {
     const { name, value } = event.target;
     setForm((prev) => ({
@@ -159,45 +234,117 @@ const ManageProducts = () => {
     }));
   };
 
-  const handleFileChange = (event) => {
-    const [selected] = event.target.files;
-    if (preview && preview.startsWith("blob:")) {
-      URL.revokeObjectURL(preview);
+  const uploadImageFile = async (file) => {
+    const formData = new FormData();
+    formData.append("image", file);
+    const { data } = await uploadAdminProductImage(formData);
+    return data.imageUrl;
+  };
+
+  const handleGalleryUpload = async (event) => {
+    const files = Array.from(event.target.files || []);
+    if (!files.length) return;
+    setGalleryUploading(true);
+    try {
+      const uploaded = [];
+      for (const file of files) {
+        const url = await uploadImageFile(file);
+        uploaded.push(url);
+      }
+      setGallery((prev) => [...prev, ...uploaded]);
+      setForm((prev) => ({
+        ...prev,
+        imageUrl: prev.imageUrl || uploaded[0] || prev.imageUrl,
+      }));
+    } catch (error) {
+      toast.error("Không thể tải ảnh. Vui lòng thử lại.");
+    } finally {
+      setGalleryUploading(false);
+      event.target.value = "";
     }
-    setFile(selected || null);
-    setPreview(selected ? URL.createObjectURL(selected) : null);
-    setForm((prev) => ({
+  };
+
+  const handleRemoveGalleryImage = (index) => {
+    setGallery((prev) => {
+      const next = prev.filter((_, current) => current !== index);
+      setForm((prevForm) => ({
+        ...prevForm,
+        imageUrl: next[0] || "",
+      }));
+      return next;
+    });
+  };
+
+  const handleSetCoverImage = (index) => {
+    setGallery((prev) => {
+      if (index <= 0 || index >= prev.length) return prev;
+      const next = [...prev];
+      const [selected] = next.splice(index, 1);
+      next.unshift(selected);
+      setForm((prevForm) => ({
+        ...prevForm,
+        imageUrl: selected || prevForm.imageUrl,
+      }));
+      return next;
+    });
+  };
+
+  const handleVariantImageUpload = async (key, event) => {
+    const files = Array.from(event.target.files || []);
+    if (!files.length) return;
+    setVariantUploading((prev) => ({ ...prev, [key]: true }));
+    try {
+      const uploaded = [];
+      for (const file of files) {
+        const url = await uploadImageFile(file);
+        uploaded.push(url);
+      }
+      setVariantImages((prev) => ({
+        ...prev,
+        [key]: [...(prev[key] || []), ...uploaded],
+      }));
+    } catch (error) {
+      toast.error("Không thể tải ảnh biến thể. Vui lòng thử lại.");
+    } finally {
+      setVariantUploading((prev) => ({ ...prev, [key]: false }));
+      event.target.value = "";
+    }
+  };
+
+  const handleRemoveVariantImage = (key, index) => {
+    setVariantImages((prev) => ({
       ...prev,
-      imageUrl: "",
+      [key]: (prev[key] || []).filter((_, current) => current !== index),
     }));
   };
 
   const resetForm = () => {
-    if (preview && preview.startsWith("blob:")) {
-      URL.revokeObjectURL(preview);
-    }
     setForm({ ...initialForm });
+    setGallery([]);
     setVariantPrices({});
-    setFile(null);
-    setPreview(null);
+    setVariantImages({});
+    setVariantUploading({});
     setEditingId(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
+    if (galleryInputRef.current) {
+      galleryInputRef.current.value = "";
     }
   };
 
   const handleEdit = (product) => {
     setEditingId(product._id);
-    const currentImage =
-      product.imageUrl ||
-      (Array.isArray(product.images) ? product.images[0] : "") ||
-      "";
     const colors = Array.isArray(product.options?.colors)
       ? product.options.colors.join(", ")
       : "";
     const capacities = Array.isArray(product.options?.capacities)
       ? product.options.capacities.join(", ")
       : "";
+    const existingGallery = Array.isArray(product.images)
+      ? product.images.filter(Boolean)
+      : [];
+    const coverImage =
+      existingGallery[0] ||
+      product.imageUrl ||
+      "";
 
     setForm({
       name: product.name || "",
@@ -211,27 +358,34 @@ const ManageProducts = () => {
         product.warrantyMonths !== undefined && product.warrantyMonths !== null
           ? String(product.warrantyMonths)
           : "12",
-      imageUrl: currentImage,
+      imageUrl: coverImage,
       colors,
       capacities,
     });
 
-    const variantMap = {};
+    setGallery(
+      existingGallery.length ? existingGallery : coverImage ? [coverImage] : []
+    );
+
+    const variantPriceMap = {};
+    const variantImageMap = {};
     if (Array.isArray(product.variants)) {
       product.variants.forEach((variant) => {
         const key = buildVariantKey(
           variant?.color || "",
           variant?.capacity || ""
         );
-        variantMap[key] =
+        variantPriceMap[key] =
           variant?.price !== undefined && variant?.price !== null
             ? String(variant.price)
             : "";
+        variantImageMap[key] = Array.isArray(variant?.images)
+          ? variant.images.filter(Boolean)
+          : [];
       });
     }
-    setVariantPrices(variantMap);
-    setFile(null);
-    setPreview(currentImage ? getAssetUrl(currentImage) : null);
+    setVariantPrices(variantPriceMap);
+    setVariantImages(variantImageMap);
   };
 
   const handleSubmit = async (event) => {
@@ -269,20 +423,15 @@ const ManageProducts = () => {
       },
     };
 
+    if (!gallery.length) {
+      toast.error("Vui lòng tải ít nhất một hình ảnh sản phẩm.");
+      return;
+    }
+
     try {
       setIsSubmitting(true);
-      let uploadedImageUrl = form.imageUrl;
-
-      if (file) {
-        const formData = new FormData();
-        formData.append("image", file);
-        const { data } = await uploadAdminProductImage(formData);
-        uploadedImageUrl = data.imageUrl;
-      }
-
-      if (uploadedImageUrl) {
-        payload.imageUrl = uploadedImageUrl;
-      }
+      payload.imageUrl = gallery[0];
+      payload.images = gallery;
 
       const baseVariantPrice = Number(form.price);
       if (!Number.isFinite(baseVariantPrice) || baseVariantPrice < 0) {
@@ -302,6 +451,7 @@ const ManageProducts = () => {
             color,
             capacity,
             price: priceValue,
+            images: variantImages[key] ?? [],
           };
         });
 
@@ -448,15 +598,33 @@ const ManageProducts = () => {
             <label className="text-sm font-medium text-slate-300" htmlFor="brand">
               Thương hiệu
             </label>
-            <input
+            <select
               id="brand"
               name="brand"
               value={form.brand}
               onChange={handleChange}
               required
               className="rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-brand-primary focus:ring-1 focus:ring-brand-primary/40"
-              placeholder="Chọn thương hiệu"
-            />
+            >
+              <option value="">
+                {brandsLoading
+                  ? "Dang tai danh sach..."
+                  : sortedBrands.length
+                  ? "Chon thuong hieu"
+                  : "Chua co thuong hieu, vui long tao truoc"}
+              </option>
+              {sortedBrands.map((brand) => (
+                <option
+                  key={brand._id || brand.slug || brand.name}
+                  value={brand.name}
+                >
+                  {brand.name}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-slate-500">
+              Quan ly danh sach thuong hieu trong muc &quot;Thuong hieu&quot;.
+            </p>
           </div>
 
           <div className="space-y-2">
@@ -586,28 +754,77 @@ const ManageProducts = () => {
             </p>
           </div>
 
-          <div className="grid gap-4 lg:grid-cols-[1fr,auto]">
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-300" htmlFor="image">
-                Hình ảnh sản phẩm
+          <div className="space-y-3 md:col-span-2">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <label className="text-sm font-medium text-slate-300">
+                Bộ sưu tập ảnh
               </label>
-              <input
-                id="image"
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                onChange={handleFileChange}
-                ref={fileInputRef}
-                className="w-full rounded-xl border border-dashed border-slate-700 px-4 py-3 text-sm text-slate-300 outline-none transition file:mr-4 file:rounded-md file:border-0 file:bg-brand-primary file:px-3 file:py-2 file:text-sm file:font-semibold file:text-white hover:border-brand-primary focus:border-brand-primary focus:ring-1 focus:ring-brand-primary/40"
-              />
-            </div>
-            {(preview || form.imageUrl) && (
-              <div className="flex items-center justify-center">
-                <img
-                  src={preview || getAssetUrl(form.imageUrl)}
-                  alt={form.name || "Product preview"}
-                  className="h-32 w-32 rounded-xl border border-slate-700 object-cover"
+              <div className="flex items-center gap-3">
+                {gallery.length > 0 && (
+                  <span className="text-xs text-slate-500">
+                    {gallery.length} ảnh • ảnh đầu tiên sẽ làm ảnh đại diện.
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => galleryInputRef.current?.click()}
+                  disabled={galleryUploading}
+                  className="rounded-full border border-brand-primary px-4 py-2 text-sm font-semibold text-brand-primary transition hover:bg-brand-primary hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {galleryUploading ? "Đang tải..." : "Thêm ảnh"}
+                </button>
+                <input
+                  ref={galleryInputRef}
+                  type="file"
+                  multiple
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={handleGalleryUpload}
+                  className="hidden"
                 />
               </div>
+            </div>
+
+            {gallery.length ? (
+              <div className="flex flex-wrap gap-4">
+                {gallery.map((image, index) => (
+                  <div
+                    key={`${image}-${index}`}
+                    className="w-32 rounded-xl border border-slate-800 bg-slate-900/60 p-2 text-center"
+                  >
+                    <img
+                      src={getAssetUrl(image)}
+                      alt={`Ảnh ${index + 1}`}
+                      className="h-24 w-full rounded-lg object-cover"
+                    />
+                    <div className="mt-2 space-y-1">
+                      {index === 0 ? (
+                        <span className="block rounded-full bg-brand-primary/20 px-2 py-1 text-xs font-semibold text-brand-primary">
+                          Ảnh đại diện
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => handleSetCoverImage(index)}
+                          className="w-full rounded-full border border-slate-700 px-2 py-1 text-xs text-slate-300 transition hover:border-brand-primary hover:text-brand-primary"
+                        >
+                          Đặt làm ảnh chính
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveGalleryImage(index)}
+                        className="w-full rounded-full border border-red-500/40 px-2 py-1 text-xs text-red-300 transition hover:bg-red-500/10 hover:text-red-200"
+                      >
+                        Xóa
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-slate-500">
+                Chưa có ảnh nào. Vui lòng tải lên ít nhất một ảnh để hiển thị.
+              </p>
             )}
           </div>
         </div>

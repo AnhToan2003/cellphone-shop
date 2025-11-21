@@ -18,8 +18,14 @@ export const fetchAdminOverview = () => apiClient.get("/admin/overview");
 
 export const fetchAdminUsers = () => apiClient.get("/admin/users");
 
+export const fetchAdminUserRankings = (params = {}) =>
+  apiClient.get(`/admin/users/rankings${buildQueryString(params)}`);
+
 export const updateAdminUserRole = (userId, payload) =>
   apiClient.patch(`/admin/users/${userId}`, payload);
+
+export const updateAdminUserRanking = (userId, payload) =>
+  apiClient.patch(`/admin/users/${userId}/ranking`, payload);
 
 export const deleteAdminUser = (userId) =>
   apiClient.delete(`/admin/users/${userId}`);
@@ -69,13 +75,51 @@ export const updateAdminOrderStatus = (orderId, payload) =>
 export const cancelMyOrder = (orderId) =>
   apiClient.patch(`/orders/${orderId}/cancel`);
 
-export const confirmMyOrderPayment = (orderId) =>
-  apiClient.patch(`/orders/${orderId}/payment/confirm`);
+export const confirmMyOrderPayment = (orderId, config = undefined) =>
+  apiClient.patch(
+    `/orders/${orderId}/payment/confirm`,
+    undefined,
+    config
+  );
 
 export const fetchMyWarrantyItems = () =>
   apiClient.get("/orders/me/warranty");
 
 export const fetchLatestProducts = (limit = 5) =>
   apiClient.get(`/products${buildQueryString({ limit })}`);
+
+export const fetchPublicProducts = (params = {}) =>
+  apiClient.get(`/products${buildQueryString(params)}`);
+
+export const fetchHomeCategories = () =>
+  apiClient.get("/home-categories");
+
+export const fetchBrands = () => apiClient.get("/brands");
+
+export const fetchAdminHomeCategories = () =>
+  apiClient.get("/admin/home-categories");
+
+export const createAdminHomeCategory = (payload) =>
+  apiClient.post("/admin/home-categories", payload);
+
+export const updateAdminHomeCategory = (categoryId, payload) =>
+  apiClient.patch(`/admin/home-categories/${categoryId}`, payload);
+
+export const deleteAdminHomeCategory = (categoryId) =>
+  apiClient.delete(`/admin/home-categories/${categoryId}`);
+
+export const fetchAdminBrands = () => apiClient.get("/admin/brands");
+
+export const createAdminBrand = (payload) =>
+  apiClient.post("/admin/brands", payload);
+
+export const updateAdminBrand = (brandId, payload) =>
+  apiClient.patch(`/admin/brands/${brandId}`, payload);
+
+export const deleteAdminBrand = (brandId) =>
+  apiClient.delete(`/admin/brands/${brandId}`);
+
+export const sendSupportMessage = (payload) =>
+  apiClient.post("/support/chat", payload);
 
 export default apiClient;

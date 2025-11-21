@@ -1,8 +1,6 @@
 import mongoose from "mongoose";
 import slugify from "slugify";
 
-const BRANDS = ["Apple", "Samsung", "Xiaomi", "OPPO", "Honor", "Vivo"];
-
 const normalizeForSearch = (value = "") =>
   value
     .toString()
@@ -16,12 +14,7 @@ const productSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true },
     slug: { type: String, unique: true, index: true },
-    brand: {
-      type: String,
-      required: true,
-      enum: BRANDS,
-      trim: true,
-    },
+    brand: { type: String, required: true, trim: true },
     price: { type: Number, required: true },
     oldPrice: { type: Number, default: null },
     finalPrice: { type: Number, default: null },
@@ -66,6 +59,7 @@ const productSchema = new mongoose.Schema(
           capacity: { type: String, default: "" },
           price: { type: Number, required: true, min: 0 },
           stock: { type: Number, default: null, min: 0 },
+          images: { type: [String], default: [] },
         },
       ],
       default: [],
@@ -153,6 +147,14 @@ productSchema.pre("save", function setComputedFields(next) {
           variant?.stock === null || variant?.stock === undefined
             ? null
             : Number(variant.stock);
+        const images = Array.isArray(variant?.images)
+          ? variant.images
+              .map((image) =>
+                typeof image === "string" ? image.trim() : ""
+              )
+              .filter((image) => image.length > 0)
+          : [];
+
         return {
           color,
           capacity,
@@ -161,6 +163,7 @@ productSchema.pre("save", function setComputedFields(next) {
             stock === null || Number.isNaN(stock) || stock < 0
               ? null
               : Math.floor(stock),
+          images,
         };
       })
       .filter(
@@ -188,7 +191,5 @@ productSchema.pre("save", function setComputedFields(next) {
 
 export const Product =
   mongoose.models.Product || mongoose.model("Product", productSchema);
-
-export const PRODUCT_BRANDS = BRANDS;
 
 export default Product;

@@ -53,6 +53,7 @@ const initialState = {
   filters: {
     search: "",
     brand: "",
+    page: 1,
   },
 };
 
@@ -61,7 +62,31 @@ const productSlice = createSlice({
   initialState,
   reducers: {
     setFilters(state, action) {
-      state.filters = { ...state.filters, ...action.payload };
+      const previousFilters = state.filters;
+      const nextFilters = { ...previousFilters, ...action.payload };
+      const searchChanged =
+        action.payload.search !== undefined &&
+        action.payload.search !== previousFilters.search;
+      const brandChanged =
+        action.payload.brand !== undefined &&
+        action.payload.brand !== previousFilters.brand;
+
+      if (action.payload.page !== undefined) {
+        const parsedPage = Number(action.payload.page);
+        nextFilters.page =
+          Number.isFinite(parsedPage) && parsedPage > 0
+            ? Math.floor(parsedPage)
+            : 1;
+      }
+
+      if (
+        action.payload.page === undefined &&
+        (searchChanged || brandChanged)
+      ) {
+        nextFilters.page = 1;
+      }
+
+      state.filters = nextFilters;
     },
     clearSelected(state) {
       state.selected = null;

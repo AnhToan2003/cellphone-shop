@@ -4,6 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-hot-toast";
 
 import RatingStars from "../components/RatingStars.jsx";
+import BackButton from "../components/BackButton.jsx";
 import { addItem } from "../store/slices/cartSlice.js";
 import { fetchProductBySlug } from "../store/slices/productSlice.js";
 import { getAssetUrl, getProductImage } from "../utils/assets.js";
@@ -34,30 +35,37 @@ const findVariantMatch = (variants = [], color = "", capacity = "") => {
     capacity: normalizeVariantValue(variant?.capacity),
   }));
 
-  const directMatch = matches.find(
-    ({ color, capacity }) => color === targetColor && capacity === targetCapacity
-  );
+  const directMatch = matches.find(({ color, capacity }) => {
+    const colorMatches = targetColor ? color === targetColor : true;
+    const capacityMatches = targetCapacity ? capacity === targetCapacity : true;
+    return colorMatches && capacityMatches;
+  });
   if (directMatch) return directMatch.variant;
-
-  if (targetCapacity) {
-    const capacityMatch = matches.find(
-      ({ color, capacity }) => !color && capacity === targetCapacity
-    );
-    if (capacityMatch) return capacityMatch.variant;
-  }
 
   if (targetColor) {
     const colorMatch = matches.find(
-      ({ color, capacity }) => color === targetColor && !capacity
+      ({ color }) => color === targetColor
     );
     if (colorMatch) return colorMatch.variant;
+  }
+
+  if (targetCapacity) {
+    const capacityMatch = matches.find(
+      ({ capacity }) => capacity === targetCapacity
+    );
+    if (capacityMatch) return capacityMatch.variant;
   }
 
   const defaultVariant = matches.find(
     ({ color, capacity }) => !color && !capacity
   );
-  return defaultVariant ? defaultVariant.variant : null;
+  return defaultVariant ? defaultVariant.variant : matches[0]?.variant ?? null;
 };
+
+const PRODUCT_IMAGE_PLACEHOLDER =
+  "https://placehold.co/600x400?text=H%C3%ACnh+%E1%BA%A3nh";
+const CART_IMAGE_PLACEHOLDER =
+  "https://placehold.co/400x300?text=Coming+Soon";
 
 const ProductDetail = () => {
   const { slug } = useParams();
@@ -72,6 +80,8 @@ const ProductDetail = () => {
   const [quantity, setQuantity] = useState(1);
   const [selectedColor, setSelectedColor] = useState("");
   const [selectedCapacity, setSelectedCapacity] = useState("");
+  const [lastSelectedOption, setLastSelectedOption] = useState(null);
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [reviews, setReviews] = useState([]);
   const [reviewMeta, setReviewMeta] = useState({
     total: 0,
@@ -85,6 +95,62 @@ const ProductDetail = () => {
     () => (Array.isArray(product?.variants) ? product.variants : []),
     [product?.variants]
   );
+
+  const {
+    capacitiesByColor,
+    colorsByCapacity,
+    combinationSet: variantCombinationSet,
+  } = useMemo(() => {
+    const mapByColor = new Map();
+    const mapByCapacity = new Map();
+    const combinationSet = new Set();
+
+    variantList.forEach((variant) => {
+      const rawColor =
+        typeof variant?.color === "string" ? variant.color : "";
+      const rawCapacity =
+        typeof variant?.capacity === "string" ? variant.capacity : "";
+
+      const normalizedColor = normalizeVariantValue(rawColor);
+      const normalizedCapacity = normalizeVariantValue(rawCapacity);
+
+      if (normalizedColor || normalizedCapacity) {
+        combinationSet.add(`${normalizedColor}__${normalizedCapacity}`);
+      }
+
+      if (normalizedColor && rawCapacity) {
+        const existingCapacities = mapByColor.get(normalizedColor) || [];
+        const hasCapacity = existingCapacities.some(
+          (value) => normalizeVariantValue(value) === normalizedCapacity
+        );
+        if (!hasCapacity) {
+          mapByColor.set(normalizedColor, [
+            ...existingCapacities,
+            rawCapacity,
+          ]);
+        }
+      }
+
+      if (normalizedCapacity && rawColor) {
+        const existingColors = mapByCapacity.get(normalizedCapacity) || [];
+        const hasColor = existingColors.some(
+          (value) => normalizeVariantValue(value) === normalizedColor
+        );
+        if (!hasColor) {
+          mapByCapacity.set(normalizedCapacity, [
+            ...existingColors,
+            rawColor,
+          ]);
+        }
+      }
+    });
+
+    return {
+      capacitiesByColor: mapByColor,
+      colorsByCapacity: mapByCapacity,
+      combinationSet,
+    };
+  }, [variantList]);
 
   const activeVariant = useMemo(
     () =>
@@ -113,6 +179,7 @@ const ProductDetail = () => {
       : [];
     setSelectedColor(colors[0] || "");
     setSelectedCapacity(capacities[0] || "");
+    setLastSelectedOption(null);
   }, [product?._id]);
 
   useEffect(() => {
@@ -156,15 +223,109 @@ const ProductDetail = () => {
     [product?.options?.capacities]
   );
 
+  useEffect(() => {
+    if (!selectedColor || lastSelectedOption === "capacity") {
+      return;
+    }
+    const normalizedColor = normalizeVariantValue(selectedColor);
+    const availableCapacities = capacitiesByColor.get(normalizedColor);
+    if (!availableCapacities || availableCapacities.length === 0) {
+      return;
+    }
+    const normalizedCapacity = normalizeVariantValue(selectedCapacity);
+    const hasCapacity = availableCapacities.some(
+      (value) => normalizeVariantValue(value) === normalizedCapacity
+    );
+    if (!hasCapacity) {
+      setSelectedCapacity(availableCapacities[0] || "");
+      if (lastSelectedOption !== null) {
+        setLastSelectedOption(null);
+      }
+    }
+  }, [
+    capacitiesByColor,
+    lastSelectedOption,
+    selectedCapacity,
+    selectedColor,
+  ]);
+
+  useEffect(() => {
+    if (!selectedCapacity || lastSelectedOption === "color") {
+      return;
+    }
+    const normalizedCapacity = normalizeVariantValue(selectedCapacity);
+    const availableColors = colorsByCapacity.get(normalizedCapacity);
+    if (!availableColors || availableColors.length === 0) {
+      return;
+    }
+    const normalizedColor = normalizeVariantValue(selectedColor);
+    const hasColor = availableColors.some(
+      (value) => normalizeVariantValue(value) === normalizedColor
+    );
+    if (!hasColor) {
+      setSelectedColor(availableColors[0] || "");
+      if (lastSelectedOption !== null) {
+        setLastSelectedOption(null);
+      }
+    }
+  }, [
+    colorsByCapacity,
+    lastSelectedOption,
+    selectedCapacity,
+    selectedColor,
+  ]);
+
   const galleryImages = useMemo(() => {
-    if (product?.images && product.images.length > 0) {
-      return product.images;
+    const seen = new Set();
+    const uniqueImages = [];
+    const pushImage = (image) => {
+      if (!image || typeof image !== "string") return;
+      const resolved = getAssetUrl(image);
+      if (!resolved || seen.has(resolved)) return;
+      seen.add(resolved);
+      uniqueImages.push(resolved);
+    };
+
+    if (Array.isArray(activeVariant?.images)) {
+      activeVariant.images.forEach(pushImage);
     }
-    if (product?.imageUrl) {
-      return [product.imageUrl];
+
+    if (Array.isArray(product?.images)) {
+      product.images.forEach(pushImage);
     }
-    return [];
-  }, [product?.images, product?.imageUrl]);
+
+    pushImage(product?.imageUrl);
+    return uniqueImages;
+  }, [activeVariant?.images, product?.images, product?.imageUrl]);
+
+  useEffect(() => {
+    setActiveImageIndex(0);
+  }, [product?._id, selectedColor, selectedCapacity]);
+
+  useEffect(() => {
+    if (!galleryImages.length && activeImageIndex !== 0) {
+      setActiveImageIndex(0);
+    } else if (
+      galleryImages.length > 0 &&
+      activeImageIndex >= galleryImages.length
+    ) {
+      setActiveImageIndex(0);
+    }
+  }, [activeImageIndex, galleryImages.length]);
+
+  const isCapacitySelectable = (capacityValue) => {
+    if (
+      !selectedColor ||
+      !variantCombinationSet ||
+      variantCombinationSet.size === 0
+    ) {
+      return true;
+    }
+    const key = `${normalizeVariantValue(
+      selectedColor
+    )}__${normalizeVariantValue(capacityValue)}`;
+    return variantCombinationSet.has(key);
+  };
 
   const handleAddToCart = () => {
     if (!product) return false;
@@ -179,10 +340,10 @@ const ProductDetail = () => {
       return false;
     }
 
-    const imageSrc = getProductImage(
-      product,
-      "https://placehold.co/400x300?text=Coming+Soon"
-    );
+    const selectedImage =
+      galleryImages[activeImageIndex] ||
+      getProductImage(product, CART_IMAGE_PLACEHOLDER);
+    const imageSrc = selectedImage || CART_IMAGE_PLACEHOLDER;
     dispatch(
       addItem({
         id: product._id,
@@ -299,14 +460,40 @@ const ProductDetail = () => {
   if (!comparePrice && discountFactor < 1) {
     comparePrice = variantBasePrice;
   }
+  const promotionPercentRaw = Number(
+    product?.appliedPromotion?.discountPercent ?? 0
+  );
+  const hasPromotionPercent =
+    Number.isFinite(promotionPercentRaw) && promotionPercentRaw > 0;
+  const clampedPromotionPercent = hasPromotionPercent
+    ? Math.min(99, Math.max(0.01, promotionPercentRaw))
+    : 0;
+  const roundedPromotionPercent = hasPromotionPercent
+    ? Math.max(1, Math.round(promotionPercentRaw))
+    : 0;
+  if (hasPromotionPercent && finalPrice > 0) {
+    const derivedCompare = Math.round(
+      finalPrice / (1 - clampedPromotionPercent / 100)
+    );
+    if (derivedCompare > comparePrice) {
+      comparePrice = derivedCompare;
+    }
+  }
 
-  const effectiveDiscount =
+  const fallbackDiscount =
     comparePrice > finalPrice && comparePrice > 0
       ? Math.max(
           0,
           Math.round(((comparePrice - finalPrice) / comparePrice) * 100)
         )
-      : product.effectiveDiscountPercent ?? product.discountPercent ?? 0;
+      : 0;
+  const effectiveDiscount =
+    roundedPromotionPercent > 0
+      ? roundedPromotionPercent
+      : fallbackDiscount ||
+        product.effectiveDiscountPercent ||
+        product.discountPercent ||
+        0;
 
   const warrantyPolicy =
     typeof product?.warrantyPolicy === "string" && product.warrantyPolicy.trim()
@@ -315,6 +502,12 @@ const ProductDetail = () => {
 
   return (
     <div className="container-safe py-12">
+      <BackButton
+        wrapperClassName="mb-4"
+        variant="neutral"
+        alwaysVisible
+        className="border-slate-200 bg-white text-slate-700 shadow-sm"
+      />
       <nav className="text-sm text-slate-500">
         <span className="hover:text-brand-primary">Trang chủ</span>
         <span className="mx-2">/</span>
@@ -327,10 +520,10 @@ const ProductDetail = () => {
         <div>
           <div className="overflow-hidden rounded-2xl bg-white p-6 shadow">
             <img
-              src={getProductImage(
-                product,
-                "https://placehold.co/600x400?text=H%C3%ACnh+%E1%BA%A3nh"
-              )}
+              src={
+                galleryImages[activeImageIndex] ||
+                getProductImage(product, PRODUCT_IMAGE_PLACEHOLDER)
+              }
               alt={product.name}
               className="mx-auto h-96 object-contain"
             />
@@ -338,12 +531,23 @@ const ProductDetail = () => {
           {galleryImages.length > 1 && (
             <div className="mt-4 flex gap-3 overflow-x-auto">
               {galleryImages.map((image, index) => (
-                <img
+                <button
                   key={`${image}-${index}`}
-                  src={getAssetUrl(image)}
-                  alt={`${product.name} ${index + 1}`}
-                  className="h-20 w-20 rounded-lg border border-slate-200 object-cover"
-                />
+                  type="button"
+                  onClick={() => setActiveImageIndex(index)}
+                  className={`rounded-xl border-2 p-0.5 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40 ${
+                    activeImageIndex === index
+                      ? "border-brand-primary shadow-sm"
+                      : "border-transparent hover:border-slate-300"
+                  }`}
+                  aria-label={`Xem ảnh ${index + 1}`}
+                >
+                  <img
+                    src={image}
+                    alt={`${product.name} ${index + 1}`}
+                    className="h-20 w-20 rounded-lg object-cover"
+                  />
+                </button>
               ))}
             </div>
           )}
@@ -409,7 +613,10 @@ const ProductDetail = () => {
                       <button
                         key={color}
                         type="button"
-                        onClick={() => setSelectedColor(color)}
+                        onClick={() => {
+                          setLastSelectedOption("color");
+                          setSelectedColor(color);
+                        }}
                         className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
                           active
                             ? "border-brand-primary bg-brand-primary text-white"
@@ -429,13 +636,19 @@ const ProductDetail = () => {
                 <h3 className="text-lg font-semibold text-slate-900">Chọn dung lượng</h3>
                 <div className="flex flex-wrap gap-2">
                   {capacities.map((capacity) => {
-                    const active = capacity === selectedCapacity;
+                    const selectable = isCapacitySelectable(capacity);
+                    const active = selectable && capacity === selectedCapacity;
                     return (
                       <button
                         key={capacity}
                         type="button"
-                        onClick={() => setSelectedCapacity(capacity)}
-                        className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
+                        onClick={() => {
+                          if (!selectable) return;
+                          setLastSelectedOption("capacity");
+                          setSelectedCapacity(capacity);
+                        }}
+                        disabled={!selectable}
+                        className={`rounded-full border px-4 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${
                           active
                             ? "border-brand-primary bg-brand-primary text-white"
                             : "border-slate-200 bg-slate-50 text-slate-600 hover:border-brand-primary hover:text-brand-primary"

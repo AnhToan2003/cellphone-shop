@@ -1,15 +1,18 @@
-import PropTypes from "prop-types";
+﻿import PropTypes from "prop-types";
 import { NavLink } from "react-router-dom";
 import {
   HiOutlineChartBar,
   HiOutlineClipboardList,
   HiOutlinePhotograph,
   HiOutlineUserGroup,
+  HiOutlineColorSwatch,
+  HiOutlineTag,
 } from "react-icons/hi";
 import { TbDeviceMobile } from "react-icons/tb";
 import { IoClose } from "react-icons/io5";
 import { LuNetwork } from "react-icons/lu";
 import { BsGift } from "react-icons/bs";
+import { FiShield } from "react-icons/fi";
 
 const links = [
   {
@@ -24,6 +27,11 @@ const links = [
     icon: HiOutlineUserGroup,
   },
   {
+    to: "/admin/user-rankings",
+    label: "Hạng khách hàng",
+    icon: LuNetwork,
+  },
+  {
     to: "/admin/products",
     label: "Quản lý sản phẩm",
     icon: TbDeviceMobile,
@@ -34,20 +42,31 @@ const links = [
     icon: HiOutlineClipboardList,
   },
   {
+    to: "/admin/warranty",
+    label: "Quản lý bảo hành",
+    icon: FiShield,
+  },
+  {
     to: "/admin/promotions",
-    label: "Khuyến mãi",
+    label: "Quản lý khuyến mãi",
     icon: BsGift,
+  },
+  {
+    to: "/admin/brands",
+    label: "Thương hiệu",
+    icon: HiOutlineTag,
+  },
+  {
+    to: "/admin/home-categories",
+    label: "Danh mục trang chủ",
+    icon: HiOutlineColorSwatch,
   },
   {
     to: "/admin/banners",
     label: "Chỉnh sửa banner",
     icon: HiOutlinePhotograph,
   },
-  {
-    to: "/admin/api-activity",
-    label: "Hoạt động API",
-    icon: LuNetwork,
-  },
+  
 ];
 
 const AdminSidebar = ({ isOpen, onClose }) => (

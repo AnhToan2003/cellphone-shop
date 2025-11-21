@@ -2,6 +2,8 @@ import mongoose from "mongoose";
 
 mongoose.set("strictQuery", true);
 
+const DEFAULT_URI = "mongodb://127.0.0.1:27017/cellphoneshop";
+
 let cachedConnection = null;
 
 export const connectDB = async (uri = process.env.MONGODB_URI) => {
@@ -9,11 +11,13 @@ export const connectDB = async (uri = process.env.MONGODB_URI) => {
     return cachedConnection;
   }
 
-  if (!uri) {
+  const resolvedUri = uri || DEFAULT_URI;
+
+  if (!resolvedUri) {
     throw new Error("MONGODB_URI is not defined");
   }
 
-  cachedConnection = await mongoose.connect(uri, {
+  cachedConnection = await mongoose.connect(resolvedUri, {
     serverSelectionTimeoutMS: 5000,
   });
 

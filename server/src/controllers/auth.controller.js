@@ -57,12 +57,17 @@ const loginSchema = z
     }
   );
 
-const buildToken = (user) =>
-  jwt.sign(
+const buildToken = (user) => {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error("Missing JWT_SECRET environment variable");
+  }
+  return jwt.sign(
     { id: user._id.toString(), role: user.role },
-    process.env.JWT_SECRET,
-    { expiresIn: "7d" }
+    secret,
+    { expiresIn: process.env.JWT_EXPIRES_IN || "7d" }
   );
+};
 
 const buildProfile = (user) => ({
   id: user._id.toString(),

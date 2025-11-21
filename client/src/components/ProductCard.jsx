@@ -22,14 +22,62 @@ const ProductCard = ({ product }) => {
   const favorites = useSelector((state) => state.favorites.items);
   const isFavorite = favorites.some((item) => item._id === product._id);
 
-  const finalPrice = product.finalPrice ?? product.price;
-  const originalPrice =
+  const finalPrice = Number(product.finalPrice ?? product.price ?? 0);
+  const priceFallback = Number(product.price ?? 0);
+  const candidateOriginal =
     product.oldPrice && product.oldPrice > 0
-      ? product.oldPrice
-      : product.basePrice ?? product.price;
-  const discountPercent =
+      ? Number(product.oldPrice)
+      : Number(
+          product.basePrice && product.basePrice > 0
+            ? product.basePrice
+            : priceFallback
+        );
+  const promotionPercentRaw = Number(
+    product.appliedPromotion?.discountPercent ?? 0
+  );
+  const hasPromotionPercent =
+    Number.isFinite(promotionPercentRaw) && promotionPercentRaw > 0;
+  const clampedPromotionPercent = hasPromotionPercent
+    ? Math.min(99, Math.max(0.01, promotionPercentRaw))
+    : 0;
+  const roundedPromotionPercent = hasPromotionPercent
+    ? Math.max(1, Math.round(promotionPercentRaw))
+    : 0;
+  const derivedOriginalFromPromotion =
+    clampedPromotionPercent > 0 && finalPrice > 0
+      ? Math.max(
+          finalPrice,
+          Math.round(finalPrice / (1 - clampedPromotionPercent / 100))
+        )
+      : null;
+  const resolvedOriginalCandidate =
+    candidateOriginal > finalPrice ? candidateOriginal : null;
+  const originalPrice =
+    (resolvedOriginalCandidate && resolvedOriginalCandidate > finalPrice
+      ? resolvedOriginalCandidate
+      : null) ||
+    derivedOriginalFromPromotion ||
+    (candidateOriginal > 0 ? candidateOriginal : finalPrice);
+  const fallbackPercent =
+    originalPrice > finalPrice && originalPrice > 0
+      ? Math.max(
+          1,
+          Math.round(((originalPrice - finalPrice) / originalPrice) * 100)
+        )
+      : 0;
+  const rawDiscountPercent =
     product.effectiveDiscountPercent ?? product.discountPercent ?? 0;
-  const hasDiscount = discountPercent > 0 && originalPrice > finalPrice;
+  const normalizedRawPercent = Number.isFinite(rawDiscountPercent)
+    ? Math.max(0, Math.round(rawDiscountPercent))
+    : 0;
+  const discountPercent =
+    roundedPromotionPercent > 0
+      ? roundedPromotionPercent
+      : normalizedRawPercent > 0
+      ? normalizedRawPercent
+      : fallbackPercent;
+  const hasDiscount =
+    discountPercent > 0 && originalPrice > finalPrice && finalPrice >= 0;
   const imageSrc = getProductImage(
     product,
     "https://placehold.co/400x300?text=Coming+Soon"
@@ -63,10 +111,10 @@ const ProductCard = ({ product }) => {
   };
 
   return (
-    <div className="group flex h-full flex-col rounded-xl bg-white p-4 shadow transition duration-200 hover:-translate-y-1 hover:shadow-card">
-      <div className="relative mb-3 overflow-hidden rounded-lg bg-slate-100">
+    <div className="group flex h-full flex-col rounded-3xl border border-white/60 bg-white/90 p-5 shadow-card backdrop-blur transition duration-300 hover:-translate-y-1.5 hover:shadow-glass">
+      <div className="relative mb-4 overflow-hidden rounded-2xl bg-gradient-to-br from-white to-slate-100">
         {hasDiscount && (
-          <span className="absolute left-3 top-3 rounded-full bg-brand-primary px-2 py-1 text-xs font-semibold text-white">
+          <span className="absolute left-3 top-3 rounded-full bg-brand-primary/90 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-white shadow-halo">
             -{discountPercent}%
           </span>
         )}
@@ -74,7 +122,7 @@ const ProductCard = ({ product }) => {
           <img
             src={imageSrc}
             alt={product.name}
-            className="h-56 w-full object-contain transition group-hover:scale-105"
+            className="h-60 w-full object-contain transition duration-500 group-hover:scale-105"
             loading="lazy"
           />
         </Link>
@@ -82,10 +130,10 @@ const ProductCard = ({ product }) => {
           type="button"
           onClick={handleToggleFavorite}
           aria-pressed={isFavorite}
-          className={`absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full shadow transition ${
+          className={`absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-full border bg-white text-brand-primary shadow-lg transition hover:-translate-y-0.5 ${
             isFavorite
-              ? "bg-red-500 text-white hover:bg-red-600"
-              : "bg-white text-brand-primary hover:bg-brand-primary hover:text-white"
+              ? "border-brand-primary ring-2 ring-brand-primary/40"
+              : "border-white/70 hover:border-brand-primary"
           }`}
           aria-label={
             isFavorite
@@ -93,28 +141,32 @@ const ProductCard = ({ product }) => {
               : "Thêm vào danh sách yêu thích"
           }
         >
-          {isFavorite ? <AiFillHeart size={18} /> : <AiOutlineHeart size={18} />}
+          {isFavorite ? (
+            <AiFillHeart size={18} className="text-brand-primary" />
+          ) : (
+            <AiOutlineHeart size={18} />
+          )}
         </button>
       </div>
 
       <div className="flex flex-1 flex-col">
-        <span className="text-xs uppercase tracking-wide text-slate-400">
+        <span className="text-xs font-semibold uppercase tracking-[0.3em] text-brand-primary/70">
           {product.brand}
         </span>
         <Link
           to={`/product/${product.slug}`}
-          className="mt-2 text-base font-semibold text-slate-900 transition hover:text-brand-primary line-clamp-2"
+          className="mt-2 text-lg font-semibold text-slate-900 transition hover:text-brand-primary line-clamp-2"
         >
           {product.name}
         </Link>
 
-        <div className="mt-3 flex items-center justify-between text-sm text-slate-500">
+        <div className="mt-3 flex items-center justify-between text-xs font-semibold text-slate-500">
           <RatingStars rating={product.rating || 0} />
           <span>{product.ratingCount || 0} đánh giá</span>
         </div>
 
-        <div className="mt-3">
-          <p className="text-xl font-bold text-brand-primary">
+        <div className="mt-4 flex flex-wrap items-end gap-2">
+          <p className="text-2xl font-bold text-gradient">
             {formatCurrency(finalPrice)}
           </p>
           {hasDiscount && (
@@ -125,24 +177,24 @@ const ProductCard = ({ product }) => {
         </div>
 
         {product.appliedPromotion?.name ? (
-          <p className="mt-2 text-xs text-emerald-500">
+          <p className="mt-2 text-xs font-semibold text-emerald-500">
             Áp dụng: {product.appliedPromotion.name}
           </p>
         ) : null}
 
-        <div className="mt-4 flex gap-3">
+        <div className="mt-5 flex gap-3">
           <button
             type="button"
             onClick={handleBuyNow}
-            className="flex-1 rounded-full bg-brand-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark"
+            className="flex-1 rounded-full bg-brand-primary px-4 py-2.5 text-sm font-semibold text-white shadow-halo transition hover:-translate-y-0.5 hover:bg-brand-dark"
           >
             Mua ngay
           </button>
           <button
             type="button"
             onClick={handleAddToCart}
-            className="flex h-11 w-11 items-center justify-center rounded-full border border-brand-primary text-brand-primary transition hover:bg-brand-primary hover:text-white"
-            aria-label="Thêm vào giỏ"
+            className="flex h-12 w-12 items-center justify-center rounded-full border border-brand-primary text-brand-primary transition hover:bg-brand-primary hover:text-white"
+            aria-label="Thêm vào giỏ hàng"
           >
             +
           </button>

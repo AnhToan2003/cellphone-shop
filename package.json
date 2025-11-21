@@ -8,15 +8,19 @@
   ],
   "scripts": {
     "dev": "npm run dev:watch",
-    "dev:watch": "concurrently \"npm:dev-server\" \"npm:build-watch\"",
-    "dev-server": "npm --prefix server run dev",
+    "dev:watch": "concurrently \"npm:dev-server\" \"npm:build-watch\" \"npm:client-port\"",
+    "predev-server": "kill-port 5000 || exit 0",
+    "dev-server": "cross-env NODE_OPTIONS=--dns-result-order=ipv4first npm --prefix server run dev",
     "build-watch": "npm --prefix client run build:watch",
+    "preclient-port": "kill-port 5174 || exit 0",
+    "client-port": "npm --prefix client run dev:port",
     "build": "npm --prefix client run build",
     "test": "npm --prefix server run test",
     "seed": "npm --prefix server run seed"
   },
   "devDependencies": {
-    "concurrently": "^8.2.2"
+    "concurrently": "^8.2.2",
+    "kill-port": "^2.0.1"
   },
   "dependencies": {
     "crypto": "^1.0.1",

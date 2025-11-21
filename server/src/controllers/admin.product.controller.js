@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { Product, PRODUCT_BRANDS } from "../models/Product.js";
+import { Product } from "../models/Product.js";
 
 const numberOrUndefined = (value) =>
   value === undefined || value === null || value === ""
@@ -29,6 +29,28 @@ const parseOptionsFromBody = (body = {}) => {
   const colors = toTrimmedArray(source.colors);
   const capacities = toTrimmedArray(source.capacities);
   return { colors, capacities };
+};
+
+const normalizeImageList = (input) => {
+  if (!input) return [];
+  if (Array.isArray(input)) {
+    return input
+      .map((value) => (typeof value === "string" ? value.trim() : ""))
+      .filter((value) => value.length > 0);
+  }
+  if (typeof input === "string") {
+    try {
+      const parsed = JSON.parse(input);
+      if (Array.isArray(parsed)) {
+        return parsed
+          .map((value) => (typeof value === "string" ? value.trim() : ""))
+          .filter((value) => value.length > 0);
+      }
+    } catch {
+      return [input.trim()];
+    }
+  }
+  return [];
 };
 
 const parseVariantsFromBody = (rawVariants) => {
@@ -61,6 +83,7 @@ const parseVariantsFromBody = (rawVariants) => {
         variant.stock === null || variant.stock === undefined
           ? null
           : Number(variant.stock);
+      const images = normalizeImageList(variant.images);
 
       if (!Number.isFinite(price) || price < 0) {
         return null;
@@ -76,6 +99,7 @@ const parseVariantsFromBody = (rawVariants) => {
         capacity,
         price,
         stock: normalizedStock,
+        images,
       };
     })
     .filter(Boolean);
@@ -106,17 +130,14 @@ const baseSchema = z.object({
   name: z.string().min(2, "Product name must contain at least 2 characters"),
   brand: z
     .string()
-    .min(2, "Brand must contain at least 2 characters")
-    .refine(
-      (value) => PRODUCT_BRANDS.includes(value),
-      "Brand is not supported"
-    ),
+    .min(2, "Brand must contain at least 2 characters"),
   price: z.number().nonnegative("Price must be greater than or equal to 0"),
   oldPrice: z.number().nonnegative().optional(),
   stock: z.number().int().min(0).optional(),
   description: z.string().optional(),
   warrantyPolicy: z.string().max(1024).optional(),
   warrantyMonths: z.number().int().min(1).max(60).optional(),
+  images: z.array(z.string()).optional(),
 });
 
 const createSchema = baseSchema.extend({
@@ -161,9 +182,26 @@ const applyProductPayload = (product, payload, extras = {}) => {
   if (payload.stock !== undefined) {
     product.stock = payload.stock ?? 0;
   }
+  if (payload.images !== undefined) {
+    const sanitizedImages = payload.images
+      .map((image) => (typeof image === "string" ? image.trim() : ""))
+      .filter((image) => image.length > 0);
+    product.images = sanitizedImages;
+  }
   if (payload.imageUrl !== undefined) {
-    product.imageUrl = payload.imageUrl;
-    product.images = [payload.imageUrl];
+    const trimmedImage = payload.imageUrl.trim();
+    product.imageUrl = trimmedImage;
+    if (!Array.isArray(product.images) || !product.images.length) {
+      product.images = [trimmedImage];
+    } else if (!product.images.includes(trimmedImage)) {
+      product.images = [trimmedImage, ...product.images.filter((img) => img !== trimmedImage)];
+    }
+  } else if (
+    (!product.imageUrl || !product.imageUrl.length) &&
+    Array.isArray(product.images) &&
+    product.images.length
+  ) {
+    product.imageUrl = product.images[0];
   }
 
   if (extras.options) {
@@ -205,6 +243,11 @@ export const adminCreateProduct = asyncHandler(async (req, res) => {
 
   const options = parseOptionsFromBody(req.body);
   const variants = parseVariantsFromBody(req.body.variants);
+  const normalizedImages = normalizeImageList(req.body.images);
+  const gallery = normalizedImages.length
+    ? normalizedImages
+    : [payload.imageUrl];
+  const coverImage = gallery[0] || payload.imageUrl;
 
   const product = await Product.create({
     name: payload.name.trim(),
@@ -215,8 +258,8 @@ export const adminCreateProduct = asyncHandler(async (req, res) => {
     description: payload.description ?? "",
     warrantyPolicy: sanitizeWarrantyPolicy(payload.warrantyPolicy),
     warrantyMonths: sanitizeWarrantyMonths(payload.warrantyMonths),
-    imageUrl: payload.imageUrl,
-    images: [payload.imageUrl],
+    imageUrl: coverImage,
+    images: gallery,
     options,
     variants,
   });

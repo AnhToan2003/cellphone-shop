@@ -30,12 +30,16 @@ PORT=5000
 MONGODB_URI=mongodb://localhost:27017/cellphones-shop
 JWT_SECRET=your-strong-secret
 CLIENT_URL=http://localhost:5173
+CLIENT_URLS=http://localhost:5173,http://localhost:5174,http://localhost:4173
+OLLAMA_URL=http://localhost:11434
+OLLAMA_MODEL=qwen2.5:3b
 ```
 
 Tùy chọn `client/.env`:
 
 ```
 VITE_API_URL=http://localhost:5000/api
+VITE_VIETQR_PORTAL_URL=http://localhost:5500/pay
 ```
 
 ### Sử dụng
@@ -62,6 +66,13 @@ VITE_API_URL=http://localhost:5000/api
 
   ```bash
   npm run build
+  ```
+
+- Chạy trang thanh toán VietQR mẫu (cổng 5500):
+
+  ```bash
+  npm install --prefix vietqr-demo
+  npm run --prefix vietqr-demo start
   ```
 
 ### Tài khoản mặc định
@@ -107,5 +118,4 @@ Tất cả response tuân theo cấu trúc `{ success, message, data }`.
 ### Ghi chú
 
 - Zod được sử dụng để kiểm tra payload trước khi ghi dữ liệu vào MongoDB.  
-- React giao diện phong cách CellphoneS với grid responsive, skeleton loading và toast thông báo thân thiện.-
-taskkill /IM node.exe /F
+- React giao diện phong cách CellphoneS với grid responsive, skeleton loading và toast thông báo thân thiện.

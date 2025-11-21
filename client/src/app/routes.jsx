@@ -4,13 +4,16 @@ import PublicLayout from "../App.jsx";
 import ProtectedRoute from "../components/ProtectedRoute.jsx";
 import AdminRoute from "../routes/AdminRoute.jsx";
 import AdminLayout from "../pages/admin/AdminLayout.jsx";
-import AdminApiActivity from "../admin/AdminApiActivity.jsx";
 import AdminDashboard from "../pages/admin/AdminDashboard.jsx";
 import ManageUsers from "../pages/admin/ManageUsers.jsx";
+import ManageUserRanks from "../pages/admin/ManageUserRanks.jsx";
 import ManageProducts from "../pages/admin/ManageProducts.jsx";
 import ManageBanners from "../pages/admin/ManageBanners.jsx";
 import ManageOrders from "../pages/admin/ManageOrders.jsx";
+import ManageWarranty from "../pages/admin/ManageWarranty.jsx";
 import ManagePromotions from "../pages/admin/ManagePromotions.jsx";
+import ManageCategories from "../pages/admin/ManageCategories.jsx";
+import ManageBrands from "../pages/admin/ManageBrands.jsx";
 import Cart from "../pages/Cart.jsx";
 import Checkout from "../pages/Checkout.jsx";
 import Orders from "../pages/Orders.jsx";
@@ -22,6 +25,8 @@ import Favorites from "../pages/Favorites.jsx";
 import Profile from "../pages/Profile.jsx";
 import WarrantyPolicy from "../pages/WarrantyPolicy.jsx";
 import PaymentReturn from "../pages/PaymentReturn.jsx";
+import PortActivity from "../pages/Port.jsx";
+import ProductList from "../pages/ProductList.jsx";
 
 const NotFound = () => (
   <div className="container-safe py-20 text-center">
@@ -37,6 +42,7 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <PublicHome /> },
       { path: "product/:slug", element: <ProductDetail /> },
+      { path: "category/:categoryKey", element: <ProductList /> },
       { path: "cart", element: <Cart /> },
       { path: "favorites", element: <Favorites /> },
       {
@@ -71,19 +77,13 @@ export const router = createBrowserRouter([
           </ProtectedRoute>
         ),
       },
-      {
-        path: "payment-return",
-        element: (
-          <ProtectedRoute>
-            <PaymentReturn />
-          </ProtectedRoute>
-        ),
-      },
+      { path: "payment-return", element: <PaymentReturn /> },
       { path: "register", element: <Register /> },
       { path: "*", element: <NotFound /> },
     ],
   },
   { path: "/login", element: <Login /> },
+  { path: "/port", element: <PortActivity /> },
   {
     path: "/admin",
     element: (
@@ -94,11 +94,14 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <AdminDashboard /> },
       { path: "users", element: <ManageUsers /> },
+      { path: "user-rankings", element: <ManageUserRanks /> },
       { path: "products", element: <ManageProducts /> },
       { path: "orders", element: <ManageOrders /> },
+      { path: "warranty", element: <ManageWarranty /> },
       { path: "promotions", element: <ManagePromotions /> },
+      { path: "brands", element: <ManageBrands /> },
+      { path: "home-categories", element: <ManageCategories /> },
       { path: "banners", element: <ManageBanners /> },
-      { path: "api-activity", element: <AdminApiActivity /> },
     ],
   },
   { path: "*", element: <NotFound /> },

@@ -70,7 +70,8 @@ const ManageUsers = () => {
       );
       toast.success("Cập nhật vai trò thành công");
     } catch (error) {
-      const message = error?.response?.data?.message || "Cập nhật vai trò thất bại";
+      const message =
+        error?.response?.data?.message || "Cập nhật vai trò thất bại";
       toast.error(message);
     } finally {
       setUpdatingId(null);
@@ -96,7 +97,8 @@ const ManageUsers = () => {
       setUsers((prev) => prev.filter((item) => item._id !== user._id));
       toast.success("Đã xóa người dùng");
     } catch (error) {
-      const message = error?.response?.data?.message || "Xóa người dùng thất bại";
+      const message =
+        error?.response?.data?.message || "Xóa người dùng thất bại";
       toast.error(message);
     } finally {
       setDeletingId(null);
@@ -113,7 +115,8 @@ const ManageUsers = () => {
           Quản lý người dùng đăng nhập
         </h1>
         <p className="max-w-2xl text-sm text-slate-400">
-          Xem nhanh 20 tài khoản đăng ký gần nhất để theo dõi tình trạng truy cập vào hệ thống.
+          Xem nhanh 20 tài khoản đăng ký gần nhất để theo dõi tình trạng truy
+          cập vào hệ thống.
         </p>
       </header>
 
@@ -139,7 +142,9 @@ const ManageUsers = () => {
                 className="grid grid-cols-12 items-center px-5 py-4 text-sm text-slate-200"
               >
                 <div className="col-span-3">
-                  <p className="font-semibold text-white">{user.name || "Chưa đặt tên"}</p>
+                  <p className="font-semibold text-white">
+                    {user.name || "Chưa đặt tên"}
+                  </p>
                   <p className="text-xs text-slate-500">#{user._id?.slice(-6)}</p>
                 </div>
                 <div className="col-span-4 text-slate-400">{user.email}</div>

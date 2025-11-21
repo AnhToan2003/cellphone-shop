@@ -1,5 +1,6 @@
 import axios from "axios";
 import { addActivity } from "../store/slices/apiActivitySlice.js";
+import { reportActivity } from "../services/monitor.js";
 
 let apiActivityDispatch = null;
 
@@ -38,55 +39,51 @@ apiClient.interceptors.request.use((config) => {
 apiClient.interceptors.response.use(
   (response) => {
     try {
-      const { config, status, data } = response;
-      const durationMs = Date.now() - (config.metadata?.start || Date.now());
-      if (apiActivityDispatch) {
-        apiActivityDispatch(
-          addActivity({
-            id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-            time: new Date().toISOString(),
-            method: config.method?.toUpperCase() || "GET",
-            url: config.baseURL
-              ? new URL(config.url || "", config.baseURL).toString()
-              : config.url,
-            status,
-            durationMs,
-            requestBody: safeSerialize(config.data),
-            responseBody: safeSerialize(data),
-            error: null,
-          })
-        );
-      }
+      const payload = buildActivityPayload(response);
+      publishActivity(payload);
     } catch {}
     return response;
   },
   (error) => {
     try {
-      const config = error.config || {};
-      const status = error.response?.status ?? null;
-      const data = error.response?.data;
-      const durationMs = Date.now() - (config.metadata?.start || Date.now());
-      if (apiActivityDispatch) {
-        apiActivityDispatch(
-          addActivity({
-            id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-            time: new Date().toISOString(),
-            method: config.method?.toUpperCase() || "GET",
-            url: config.baseURL
-              ? new URL(config.url || "", config.baseURL).toString()
-              : config.url,
-            status,
-            durationMs,
-            requestBody: safeSerialize(config.data),
-            responseBody: safeSerialize(data),
-            error: safeSerialize(error?.message || error?.toString?.()),
-          })
-        );
-      }
+      const payload = buildActivityPayload(null, error);
+      publishActivity(payload);
     } catch {}
     return Promise.reject(error);
   }
 );
+
+const publishActivity = (activity) => {
+  if (!activity) return;
+  if (apiActivityDispatch) {
+    apiActivityDispatch(addActivity(activity));
+  }
+  reportActivity(activity);
+};
+
+const buildActivityPayload = (response, error) => {
+  const source = response || error?.response;
+  const config = source?.config || error?.config || response?.config || {};
+  const status = response?.status ?? error?.response?.status ?? null;
+  const data = response?.data ?? error?.response?.data;
+  const durationMs = Date.now() - (config.metadata?.start || Date.now());
+
+  return {
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    time: new Date().toISOString(),
+    method: config.method?.toUpperCase() || "GET",
+    url: config.baseURL
+      ? new URL(config.url || "", config.baseURL).toString()
+      : config.url,
+    status,
+    durationMs,
+    requestBody: safeSerialize(config.data),
+    responseBody: safeSerialize(data),
+    error: error
+      ? safeSerialize(error?.message || error?.toString?.())
+      : null,
+  };
+};
 
 function safeSerialize(val) {
   try {

@@ -261,7 +261,7 @@ const Orders = () => {
             (typeof product?.slug === "string" && product.slug) ||
             (typeof item?.slug === "string" && item.slug) ||
             "";
-          const productLink = productSlug ? `/products/${productSlug}` : "#";
+          const productLink = productSlug ? `/product/${productSlug}` : "#";
           const key = buildItemReviewKey(order?._id, item, index);
           const alreadyReviewed = Boolean(item?.alreadyReviewed);
           const hasReviewed =
