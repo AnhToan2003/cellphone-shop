@@ -21,7 +21,10 @@ import PublicHome from "../pages/PublicHome.jsx";
 import Login from "../pages/Login.jsx";
 import ProductDetail from "../pages/ProductDetail.jsx";
 import Register from "../pages/Register.jsx";
+import AboutPage from "../pages/About.jsx";
 import Favorites from "../pages/Favorites.jsx";
+import ViewHistory from "../pages/ViewHistory.jsx";
+import AllProducts from "../pages/AllProducts.jsx";
 import Profile from "../pages/Profile.jsx";
 import WarrantyPolicy from "../pages/WarrantyPolicy.jsx";
 import PaymentReturn from "../pages/PaymentReturn.jsx";
@@ -79,6 +82,10 @@ export const router = createBrowserRouter([
       },
       { path: "payment-return", element: <PaymentReturn /> },
       { path: "register", element: <Register /> },
+      { path: "about", element: <AboutPage /> },
+      { path: "faq", element: <AboutPage initialSection="faq" /> },
+      { path: "products", element: <AllProducts /> },
+      { path: "history", element: <ViewHistory /> },
       { path: "*", element: <NotFound /> },
     ],
   },

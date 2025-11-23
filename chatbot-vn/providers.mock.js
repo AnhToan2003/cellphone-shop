@@ -87,18 +87,19 @@ export const orderProvider = {
     if (orderId === "DH123") {
       return {
         order_id: orderId,
-        phone_number: phoneNumber || "Ẩn",
-        status: "Đang giao",
+        phone_number: phoneNumber || "0123456789",
+        status: "Dang giao",
         carrier: "GHN",
-        eta: "2-3 ngày",
+        eta: "2-3 ngay",
         last_update: new Date().toISOString(),
       };
     }
     return {
       order_id: orderId || "",
       phone_number: phoneNumber || "",
-      status: "Không tìm thấy",
-      message: "Không tìm thấy thông tin đơn hàng. Vui lòng kiểm tra lại mã đơn.",
+      status: "Khong tim thay",
+      message:
+        "Khong tim thay thong tin don hang. Vui long kiem tra lai ma don.",
     };
   },
 };

@@ -16,7 +16,7 @@ export const errorHandler = (err, req, res, next) => {
   };
 
   if (err instanceof ZodError) {
-    payload.message = "Validation failed";
+    payload.message = "Trùng gmail";
     payload.errors = err.errors.map((issue) => ({
       path: issue.path.join("."),
       message: issue.message,
@@ -26,7 +26,7 @@ export const errorHandler = (err, req, res, next) => {
   }
 
   if (err.name === "ValidationError" && err.errors) {
-    payload.message = "Validation failed";
+    payload.message = "Trùng tên đăng nhập";
     payload.errors = Object.values(err.errors).map((issue) => issue.message);
   }
 

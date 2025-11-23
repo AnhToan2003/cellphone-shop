@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+
 const CONTACT_ITEMS = [
   { label: "Hotline", value: "0794 460 285" },
   { label: "Email", value: "support@cellphones.dev" },
@@ -5,6 +7,10 @@ const CONTACT_ITEMS = [
 ];
 
 const POLICY_ITEMS = ["Đổi trả 30 ngày", "Giao hàng toàn quốc", "Thanh toán COD/Online"];
+const INFO_LINKS = [
+  { label: "Về chúng tôi", to: "/about" },
+  { label: "Câu hỏi thường gặp (FAQ)", to: "/faq" },
+];
 const SOCIAL_ITEMS = ["Facebook", "Zalo", "YouTube", "TikTok"];
 const SERVICE_HIGHLIGHTS = [
   { title: "GIAO NHANH 2H", subtitle: "TOÀN QUỐC" },
@@ -29,15 +35,15 @@ const Footer = () => {
         ))}
       </div>
 
-      <div className="container-safe grid gap-10 py-16 lg:grid-cols-4">
+      <div className="container-safe grid gap-10 py-16 lg:grid-cols-5">
         <div className="space-y-4">
           <p className="pill-badge bg-white/10 text-white">Cellphone Shop</p>
           <h3 className="text-2xl font-semibold text-white">
             Công nghệ sống động, trải nghiệm đa kênh.
           </h3>
           <p className="text-sm text-white/70">
-            Khám phá showroom trực tuyến với kho sản phẩm flagship, giao nhanh 2h và ưu đãi độc quyền chỉ có tại
-            Cellphone Shop.
+            Khám phá showroom trực tuyến với kho sản phẩm flagship, giao nhanh 2h và ưu đãi độc quyền chỉ
+            tại Cellphone Shop.
           </p>
         </div>
 
@@ -64,6 +70,22 @@ const Footer = () => {
                 className="rounded-2xl border border-white/10 px-4 py-2 text-white/70 transition hover:border-white/40 hover:text-white"
               >
                 {item}
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div>
+          <h4 className="text-sm font-semibold uppercase tracking-[0.3em] text-white/60">Thông tin</h4>
+          <ul className="mt-4 space-y-3 text-sm text-white/80">
+            {INFO_LINKS.map((item) => (
+              <li key={item.label}>
+                <Link
+                  to={item.to}
+                  className="block rounded-2xl border border-white/10 px-4 py-2 text-white/80 transition hover:border-white/40 hover:text-white"
+                >
+                  {item.label}
+                </Link>
               </li>
             ))}
           </ul>

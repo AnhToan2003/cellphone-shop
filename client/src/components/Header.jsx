@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { FiLogOut, FiMapPin, FiUser } from "react-icons/fi";
 import { HiOutlineShoppingBag } from "react-icons/hi";
@@ -92,8 +92,13 @@ const Header = () => {
   };
 
   const chipPadding = isCompact ? "py-1 text-xs" : "py-1.5 text-sm";
-  const actionChip =
-    "rounded-full border border-white/25 px-4 font-semibold text-white/90 backdrop-blur transition duration-200 hover:-translate-y-0.5 hover:bg-white hover:text-brand-primary flex items-center justify-center gap-2";
+  const chipGhost =
+    "border-white/25 bg-white/10 text-white hover:border-white/60 hover:bg-white/20 hover:text-white";
+  const chipActive =
+    "border-white bg-white text-brand-primary shadow-lg shadow-white/30";
+  const actionChipBase =
+    "rounded-full border px-4 font-semibold backdrop-blur transition duration-200 hover:-translate-y-0.5 flex items-center justify-center gap-2";
+  const actionChip = `${actionChipBase} ${chipGhost}`;
 
   return (
     <header
@@ -160,7 +165,7 @@ const Header = () => {
               </button>
             </form>
 
-            <div className="flex flex-wrap items-center justify-end gap-2">
+            <div className="flex flex-wrap items-center justify-end gap-2 lg:flex-nowrap lg:justify-end">
               <div className="flex items-center gap-2 rounded-full border border-white/30 px-3 py-1.5 text-xs text-white/80 lg:hidden">
                 <FiMapPin size={16} />
                 <span>TP. Hồ Chí Minh</span>
@@ -233,7 +238,39 @@ const Header = () => {
                 )}
               </div>
 
-              <Link to="/cart" className={`${actionChip} ${chipPadding}`}>
+              <NavLink
+                to="/about"
+                className={({ isActive }) =>
+                  `${actionChipBase} ${chipPadding} ${isActive ? chipActive : chipGhost}`
+                }
+              >
+                Về chúng tôi
+              </NavLink>
+
+              <NavLink
+                to="/history"
+                className={({ isActive }) =>
+                  `${actionChipBase} ${chipPadding} ${isActive ? chipActive : chipGhost}`
+                }
+              >
+                Đã xem
+              </NavLink>
+
+              <NavLink
+                to="/products"
+                className={({ isActive }) =>
+                  `${actionChipBase} ${chipPadding} ${isActive ? chipActive : chipGhost}`
+                }
+              >
+                Tất cả sản phẩm
+              </NavLink>
+
+              <NavLink
+                to="/cart"
+                className={({ isActive }) =>
+                  `${actionChipBase} ${chipPadding} ${isActive ? chipActive : chipGhost}`
+                }
+              >
                 <HiOutlineShoppingBag size={20} />
                 <span>Giỏ hàng</span>
                 {cartCount > 0 && (
@@ -241,7 +278,7 @@ const Header = () => {
                     {cartCount}
                   </span>
                 )}
-              </Link>
+              </NavLink>
 
               {isAuthenticated ? (
                 <>

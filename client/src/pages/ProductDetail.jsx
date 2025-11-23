@@ -10,6 +10,7 @@ import { fetchProductBySlug } from "../store/slices/productSlice.js";
 import { getAssetUrl, getProductImage } from "../utils/assets.js";
 import { fetchProductReviews, createProductReview } from "../services/api.js";
 import { useAuth } from "../context/AuthContext.jsx";
+import { addToViewHistory } from "../utils/viewHistory.js";
 
 const currency = (value) =>
   new Intl.NumberFormat("vi-VN", {
@@ -180,6 +181,11 @@ const ProductDetail = () => {
     setSelectedColor(colors[0] || "");
     setSelectedCapacity(capacities[0] || "");
     setLastSelectedOption(null);
+
+    addToViewHistory({
+      ...product,
+      finalPrice: product.finalPrice ?? product.price ?? 0,
+    });
   }, [product?._id]);
 
   useEffect(() => {

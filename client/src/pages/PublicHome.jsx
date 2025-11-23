@@ -518,11 +518,11 @@ const PublicHome = () => {
       <div className="relative pb-24">
         <div className="absolute inset-0 -z-10 bg-white/30" aria-hidden="true" />
         <div className="container-safe space-y-12 py-10">
-        <Banner
-          slides={bannerSlides}
-          onSlideNavigate={(slide) => {
-            if (slide?.link) {
-              if (/^https?:\/\//i.test(slide.link)) {
+          <Banner
+            slides={bannerSlides}
+            onSlideNavigate={(slide) => {
+              if (slide?.link) {
+                if (/^https?:\/\//i.test(slide.link)) {
                 window.open(slide.link, "_blank", "noopener,noreferrer");
               } else {
                 navigate(slide.link);
@@ -957,6 +957,55 @@ const PublicHome = () => {
         </section>
         </div>
       </div>
+      <section className="container-safe pb-16">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            {
+              title: "Giao nhanh 2H",
+              desc: "Đặt hàng online, nhận tại nhà hoặc cửa hàng gần nhất.",
+              accent: "from-brand-primary/15 via-brand-light/10 to-white",
+              tag: "Vận chuyển",
+            },
+            {
+              title: "Trả góp linh hoạt",
+              desc: "0% qua thẻ tín dụng/đối tác tài chính, duyệt nhanh.",
+              accent: "from-aurora/15 via-blue-100 to-white",
+              tag: "Thanh toán",
+            },
+            {
+              title: "Bảo hành minh bạch",
+              desc: "Theo dõi trạng thái, đổi mới 30 ngày cho lỗi NSX.",
+              accent: "from-emerald-100 via-white to-white",
+              tag: "Hậu mãi",
+            },
+            {
+              title: "Thu cũ đổi mới",
+              desc: "Định giá nhanh, trừ thẳng vào đơn hàng mới.",
+              accent: "from-amber-100 via-pink-50 to-white",
+              tag: "Nâng cấp",
+            },
+          ].map((item, idx) => (
+            <div
+              key={item.title}
+              className={`motion-card motion-delay-${(idx % 4) + 1} relative overflow-hidden rounded-3xl border border-slate-100 bg-white p-5 shadow-card`}
+            >
+              <div
+                className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${item.accent}`}
+                aria-hidden
+              />
+              <div className="relative space-y-2">
+                <span className="pill-badge bg-slate-100 text-slate-600">{item.tag}</span>
+                <h3 className="text-lg font-semibold text-slate-900">{item.title}</h3>
+                <p className="text-sm text-slate-600">{item.desc}</p>
+                <div className="flex items-center gap-2 text-sm font-semibold text-brand-primary">
+                  Tìm hiểu thêm
+                  <span aria-hidden>→</span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
     </>
   );
 };

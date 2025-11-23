@@ -2,14 +2,32 @@ import express from "express";
 import fetch from "node-fetch";
 
 const SYSTEM_PROMPT = `Bạn là Trợ lý CSKH của Cellphone Shop.
-Luôn trả lời bằng tiếng Việt, lịch sự, ngắn gọn.
-Khi khách hỏi về sản phẩm, nếu thiếu thông tin hãy hỏi lại ngân sách/nhu cầu; sau đó gợi ý 2–3 mẫu phù hợp (tên, giá, điểm nổi bật, link).
-Khi khách cung cấp mã đơn, hãy gọi công cụ checkOrder để kiểm tra tình trạng giao hàng.
+Luôn trả lời bằng tiếng Việt, lịch sự, súc tích.
+Phải gọi tool searchProducts/checkOrder để lấy dữ liệu thực tế; không tự suy diễn hay bịa giá/khuyến mãi/kho. Nếu tool không trả về dữ liệu, nói rõ “Hiện chưa có dữ liệu để trả lời”.
+Nếu khách hỏi về sản phẩm, khi thiếu thông tin hãy hỏi lại ngân sách/nhu cầu; sau đó gợi ý 2-3 mẫu phù hợp (tên, giá, điểm nổi bật, link).
+Mỗi gợi ý sản phẩm phải có giá cuối (final_price/price) và % giảm (discount_percent nếu có, nếu không thì ghi "không giảm"); không tự tính hay bịa nếu tool không trả về.
+Khi khách cung cấp mã đơn, hãy gọi đúng tool checkOrder để kiểm tra tình trạng giao hàng.
 Không bịa thông tin. Nếu không chắc, mời khách kết nối nhân viên.
-Với thao tác rủi ro (đặt/hủy/thu cọc), luôn xác nhận lại trước khi thực hiện.`;
+Với thao tác rủi ro (đặt/hủy/thu cọc), luôn xác nhận lại trước khi thực hiện.
+Chỉ gọi tool khi thật sự cần thiết để trả lời chính xác, ưu tiên phản hồi ngắn gọn.`;
 
 const OLLAMA_URL = process.env.OLLAMA_URL || "http://localhost:11434";
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "qwen2.5:3b";
+const toNumber = (value, fallback) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+};
+const OLLAMA_OPTIONS = {
+  temperature: toNumber(process.env.OLLAMA_TEMPERATURE, 0.2),
+  top_p: toNumber(process.env.OLLAMA_TOP_P, 0.85),
+  top_k: toNumber(process.env.OLLAMA_TOP_K, 40),
+  num_predict: toNumber(process.env.OLLAMA_NUM_PREDICT, 300),
+  seed: toNumber(process.env.OLLAMA_SEED, 42),
+};
+const OLLAMA_TIMEOUT_MS = Math.max(
+  1000,
+  toNumber(process.env.OLLAMA_TIMEOUT_MS, 15000)
+);
 const sanitizeBaseUrl = (value, fallback) => {
   const normalized = (value || fallback || "").trim();
   return normalized.replace(/\/+$/, "");
@@ -30,6 +48,48 @@ const parseNumberFromString = (value) => {
   if (value === null || value === undefined) return null;
   const match = String(value).replace(/,/g, ".").match(/(\d+(?:\.\d+)?)/);
   return match ? Number(match[1]) : null;
+};
+
+const normalizeProductPricing = (product = {}) => {
+  const finalPrice =
+    parseNumberFromString(product.final_price) ??
+    parseNumberFromString(product.finalPrice) ??
+    parseNumberFromString(product.price) ??
+    0;
+  const originalPrice =
+    parseNumberFromString(product.original_price) ??
+    parseNumberFromString(product.originalPrice) ??
+    parseNumberFromString(product.oldPrice) ??
+    parseNumberFromString(product.base_price) ??
+    parseNumberFromString(product.basePrice) ??
+    finalPrice;
+  const discountPercent =
+    Number.isFinite(product.discount_percent) && product.discount_percent >= 0
+      ? product.discount_percent
+      : Number.isFinite(product.discountPercent) && product.discountPercent >= 0
+        ? product.discountPercent
+        : Number.isFinite(product.effectiveDiscountPercent) &&
+            product.effectiveDiscountPercent >= 0
+          ? product.effectiveDiscountPercent
+          : originalPrice
+            ? Math.max(
+                0,
+                Math.min(
+                  100,
+                  Math.round(
+                    (1 - Number(finalPrice) / Number(originalPrice)) * 100
+                  )
+                )
+              )
+            : 0;
+
+  return {
+    ...product,
+    price: finalPrice,
+    final_price: finalPrice,
+    original_price: originalPrice,
+    discount_percent: discountPercent,
+  };
 };
 
 const buildProductUrl = (slugOrId = "") => {
@@ -69,14 +129,22 @@ const mapProductToSuggestion = (product = {}, variant = null) => {
     parseNumberFromString(chosenVariant?.price) ??
     parseNumberFromString(product.price) ??
     0;
-  const basePrice =
-    parseNumberFromString(product.basePrice) ?? variantPrice ?? 0;
+
   const finalPrice =
     parseNumberFromString(product.finalPrice) ??
-    basePrice ??
+    parseNumberFromString(product.final_price) ??
     variantPrice ??
     0;
+
+  const basePrice =
+    parseNumberFromString(product.basePrice) ??
+    parseNumberFromString(product.base_price) ??
+    variantPrice ??
+    finalPrice;
+
   const originalPrice =
+    parseNumberFromString(product.originalPrice) ??
+    parseNumberFromString(product.original_price) ??
     parseNumberFromString(product.oldPrice) ??
     basePrice ??
     variantPrice ??
@@ -84,6 +152,8 @@ const mapProductToSuggestion = (product = {}, variant = null) => {
 
   const discountPercent =
     product.effectiveDiscountPercent ??
+    product.discountPercent ??
+    product.discount_percent ??
     (originalPrice && finalPrice
       ? Math.max(
           0,
@@ -155,7 +225,6 @@ const fetchStoreProducts = async (args = {}) => {
   }
 };
 
-// Định nghĩa tools theo format của Ollama
 const toolDefinitions = [
   {
     type: "function",
@@ -166,9 +235,17 @@ const toolDefinitions = [
       parameters: {
         type: "object",
         properties: {
+          keyword: {
+            type: "string",
+            description: "Từ khóa tìm kiếm chung.",
+          },
           brand: {
             type: "string",
             description: "Tên thương hiệu (Apple/Samsung/Xiaomi...).",
+          },
+          price_min: {
+            type: "number",
+            description: "Ngân sách tối thiểu (VND).",
           },
           price_max: {
             type: "number",
@@ -181,6 +258,10 @@ const toolDefinitions = [
           storage_gb: {
             type: "number",
             description: "Dung lượng lưu trữ tối thiểu (GB).",
+          },
+          limit: {
+            type: "number",
+            description: "Số lượng gợi ý (mặc định 3).",
           },
         },
       },
@@ -201,7 +282,7 @@ const toolDefinitions = [
           },
           phone_number: {
             type: "string",
-            description: "SĐT khách hàng (nếu cung cấp).",
+            description: "Số điện thoại khách hàng (nếu có).",
           },
         },
       },
@@ -209,30 +290,39 @@ const toolDefinitions = [
   },
 ];
 
-// Call Ollama API
+const buildOllamaPayload = (messages, tools = null) => {
+  const options = Object.fromEntries(
+    Object.entries(OLLAMA_OPTIONS).filter(([, value]) =>
+      Number.isFinite(value)
+    )
+  );
+
+  const payload = {
+    model: OLLAMA_MODEL,
+    messages,
+    stream: false,
+    options,
+  };
+
+  if (tools && tools.length > 0) {
+    payload.tools = tools;
+  }
+
+  return payload;
+};
+
 const callOllama = async (messages, tools = null) => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), OLLAMA_TIMEOUT_MS);
+
   try {
-    const payload = {
-      model: OLLAMA_MODEL,
-      messages: messages,
-      stream: false,
-      options: {
-        temperature: 0.7,
-        top_p: 0.9,
-      },
-    };
-
-    // Thêm tools nếu có
-    if (tools && tools.length > 0) {
-      payload.tools = tools;
-    }
-
     const response = await fetch(`${OLLAMA_URL}/api/chat`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(buildOllamaPayload(messages, tools)),
+      signal: controller.signal,
     });
 
     if (!response.ok) {
@@ -242,12 +332,16 @@ const callOllama = async (messages, tools = null) => {
     const data = await response.json();
     return data;
   } catch (error) {
+    if (error.name === "AbortError") {
+      throw new Error(`Ollama timeout sau ${OLLAMA_TIMEOUT_MS}ms`);
+    }
     console.error("Ollama call error:", error);
     throw new Error(`Không thể kết nối Ollama: ${error.message}`);
+  } finally {
+    clearTimeout(timeoutId);
   }
 };
 
-// Parse tool calls từ response của Ollama
 const parseToolCalls = (message) => {
   if (!message?.tool_calls || !Array.isArray(message.tool_calls)) {
     return [];
@@ -262,7 +356,6 @@ const parseToolCalls = (message) => {
     .filter((call) => call.name);
 };
 
-// Execute tool
 const executeToolCall = async (
   call,
   { productsProvider, orderProvider }
@@ -292,10 +385,14 @@ const executeToolCall = async (
         result = await fetchStoreProducts(args);
       }
 
+      const products = (Array.isArray(result) ? result : []).map(
+        normalizeProductPricing
+      );
+
       return {
         success: true,
-        count: result.length,
-        products: result,
+        count: products.length,
+        products,
       };
     }
 
@@ -305,8 +402,8 @@ const executeToolCall = async (
           order_id: args.order_id,
           phone_number: args.phone_number,
         }) || {
-          status: "Không tìm thấy",
-          message: "Không tìm thấy đơn hàng.",
+          status: "Khong tim thay",
+          message: "Khong tim thay don hang.",
         }
       );
     }
@@ -322,10 +419,8 @@ const makeChatRouter = ({ productsProvider, orderProvider }) => {
   const router = express.Router();
   router.use(express.json({ limit: "1mb" }));
 
-  // Health check
   router.get("/health", async (req, res) => {
     try {
-      // Kiểm tra kết nối Ollama
       const response = await fetch(`${OLLAMA_URL}/api/tags`);
       const isOllamaRunning = response.ok;
 
@@ -346,28 +441,21 @@ const makeChatRouter = ({ productsProvider, orderProvider }) => {
     }
   });
 
-  // Main chat handler
   const handleChatRequest = async (message) => {
-    // Khởi tạo conversation
     const messages = [
       { role: "system", content: SYSTEM_PROMPT },
       { role: "user", content: clampText(message) },
     ];
 
-    // Gọi Ollama lần đầu (có tools)
     let response = await callOllama(messages, toolDefinitions);
 
-    // Parse tool calls
     const toolCalls = parseToolCalls(response.message);
 
-    // Nếu có tool calls, thực thi chúng
     if (toolCalls.length > 0) {
       console.log("Tool calls detected:", toolCalls.length);
 
-      // Thêm assistant message với tool calls
       messages.push(response.message);
 
-      // Execute từng tool và thêm results
       for (const call of toolCalls) {
         console.log(`Executing tool: ${call.name}`);
         const result = await executeToolCall(call, {
@@ -375,7 +463,6 @@ const makeChatRouter = ({ productsProvider, orderProvider }) => {
           orderProvider,
         });
 
-        // Thêm tool result vào messages
         messages.push({
           role: "tool",
           content: JSON.stringify(result),
@@ -383,8 +470,10 @@ const makeChatRouter = ({ productsProvider, orderProvider }) => {
         });
       }
 
-      // Gọi lại Ollama với tool results
       response = await callOllama(messages, toolDefinitions);
+    } else {
+      // Không có dữ liệu tool, trả lời an toàn để tránh bịa
+      return "Hiện chưa có dữ liệu để trả lời. Vui lòng mô tả rõ hơn hoặc thử lại.";
     }
 
     const reply = response?.message?.content?.trim();
@@ -395,7 +484,6 @@ const makeChatRouter = ({ productsProvider, orderProvider }) => {
     return reply;
   };
 
-  // Chat endpoint
   router.post("/api/chat", async (req, res) => {
     try {
       const { message } = req.body ?? {};
@@ -416,7 +504,6 @@ const makeChatRouter = ({ productsProvider, orderProvider }) => {
     }
   });
 
-  // Test endpoint
   router.post("/api/chat/test", async (req, res) => {
     try {
       const response = await callOllama([

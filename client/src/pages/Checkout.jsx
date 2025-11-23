@@ -130,6 +130,8 @@ const Checkout = () => {
       paymentMethod: selectedAddress.paymentMethod || "cod",
     });
     toast.success("Đã điền thông tin theo địa chỉ đã chọn.");
+    setSelectedAddressId("");
+    setEditingAddressId("");
   };
 
   const handleStartEdit = () => {
