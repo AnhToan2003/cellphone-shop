@@ -102,3 +102,44 @@ export const deleteBanner = async (req, res, next) => {
     next(error);
   }
 };
+
+export const updateBanner = async (req, res, next) => {
+  try {
+    const banner = await Banner.findById(req.params.id);
+    if (!banner) {
+      return res.status(404).json({
+        success: false,
+        message: "Banner not found",
+      });
+    }
+
+    const parsed = bannerBodySchema.parse(req.body ?? {});
+
+    let nextImageUrl = banner.imageUrl;
+
+    if (req.file) {
+      nextImageUrl = `/uploads/banners/${req.file.filename}`;
+      const oldBannerFile = banner.imageUrl
+        ? path.join(uploadsBasePath, "banners", path.basename(banner.imageUrl))
+        : null;
+      if (oldBannerFile && fs.existsSync(oldBannerFile)) {
+        fs.unlink(oldBannerFile, () => {});
+      }
+    }
+
+    banner.title = parsed.title.trim();
+    banner.description = parsed.description.trim();
+    banner.link = parsed.link.trim();
+    banner.imageUrl = nextImageUrl;
+
+    await banner.save();
+
+    res.json({
+      success: true,
+      message: "Banner updated successfully",
+      data: banner,
+    });
+  } catch (error) {
+    next(error);
+  }
+};

@@ -523,18 +523,18 @@ const PublicHome = () => {
             onSlideNavigate={(slide) => {
               if (slide?.link) {
                 if (/^https?:\/\//i.test(slide.link)) {
-                window.open(slide.link, "_blank", "noopener,noreferrer");
-              } else {
-                navigate(slide.link);
+                  window.location.href = slide.link; // stay in same tab
+                } else {
+                  navigate(slide.link);
+                }
+                return;
               }
-              return;
-            }
-            const element = document.getElementById("product-grid");
-            if (element) {
-              element.scrollIntoView({ behavior: "smooth" });
-            }
-          }}
-        />
+              const element = document.getElementById("product-grid");
+              if (element) {
+                element.scrollIntoView({ behavior: "smooth" });
+              }
+            }}
+          />
 
         <section className="grid gap-4 md:grid-cols-3">
           {EXPERIENCE_FEATURES.map((feature, featureIndex) => (

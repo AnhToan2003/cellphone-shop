@@ -13,9 +13,12 @@ const ManageBanners = () => {
   const [banners, setBanners] = useState([]);
   const [form, setForm] = useState(initialState);
   const [file, setFile] = useState(null);
+  const [editingId, setEditingId] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const fileInputRef = useRef(null);
+
+  const isEditing = Boolean(editingId);
 
   const loadBanners = async () => {
     try {
@@ -54,9 +57,28 @@ const ManageBanners = () => {
     }
   };
 
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    resetForm();
+  };
+
+  const handleEdit = (banner) => {
+    setEditingId(banner._id);
+    setForm({
+      title: banner.title || "",
+      description: banner.description || "",
+      link: banner.link || "",
+    });
+    setFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
-    if (!file) {
+    if (!isEditing && !file) {
       toast.error("Vui lòng chọn hình banner");
       return;
     }
@@ -65,20 +87,37 @@ const ManageBanners = () => {
       setIsSubmitting(true);
       const formData = new FormData();
       Object.entries(form).forEach(([key, value]) => formData.append(key, value));
-      formData.append("image", file);
+      if (file) {
+        formData.append("image", file);
+      }
 
-      const response = await apiClient.post("/banners/upload", formData, {
+      const requestConfig = {
         headers: { "Content-Type": "multipart/form-data" },
-      });
+      };
 
-      if (response.data?.success) {
-        toast.success("Đã thêm banner mới");
-        resetForm();
-        await loadBanners();
+      if (isEditing) {
+        const response = await apiClient.put(
+          `/banners/${editingId}`,
+          formData,
+          requestConfig
+        );
+        if (response.data?.success) {
+          toast.success("Đã cập nhật banner");
+          handleCancelEdit();
+          await loadBanners();
+        }
+      } else {
+        const response = await apiClient.post("/banners/upload", formData, requestConfig);
+        if (response.data?.success) {
+          toast.success("Đã thêm banner mới");
+          resetForm();
+          await loadBanners();
+        }
       }
     } catch (error) {
       const message =
-        error.response?.data?.message || "Không thể thêm banner";
+        error.response?.data?.message ||
+        (isEditing ? "Không thể cập nhật banner" : "Không thể thêm banner");
       toast.error(message);
     } finally {
       setIsSubmitting(false);
@@ -86,7 +125,7 @@ const ManageBanners = () => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm("Bạn có chắc chắn muốn xóa banner này?")) {
+    if (!window.confirm("Bạn chắc chắn muốn xóa banner này?")) {
       return;
     }
 
@@ -95,22 +134,34 @@ const ManageBanners = () => {
       toast.success("Đã xóa banner");
       await loadBanners();
     } catch (error) {
-      const message =
-        error.response?.data?.message || "Không thể xóa banner";
+      const message = error.response?.data?.message || "Không thể xóa banner";
       toast.error(message);
     }
   };
 
+  const submitLabel = isSubmitting
+    ? isEditing
+      ? "Đang cập nhật..."
+      : "Đang tải lên..."
+    : isEditing
+    ? "Cập nhật banner"
+    : "Thêm banner";
+
+  const resetLabel = isEditing ? "Hủy chỉnh sửa" : "Làm mới";
+
   return (
     <div className="space-y-8">
       <header>
-        <p className="text-xs uppercase tracking-[0.3em] text-brand-primary">
-          Banner
-        </p>
+        <p className="text-xs uppercase tracking-[0.3em] text-brand-primary">Banner</p>
         <h1 className="mt-1 text-3xl font-semibold text-white">Quản lý banner</h1>
         <p className="mt-2 text-sm text-slate-400">
-          Tải lên banner mới và điều chỉnh nội dung xuất hiện trên slider trang chủ.
+          Tải lên banner mới và chỉnh sửa nội dung xuất hiện trên slider trang chủ.
         </p>
+        {isEditing ? (
+          <p className="mt-2 text-xs font-semibold text-brand-primary">
+            Đang chỉnh sửa banner. Bấm "Hủy chỉnh sửa" để quay lại thêm banner mới.
+          </p>
+        ) : null}
       </header>
 
       <form
@@ -169,25 +220,25 @@ const ManageBanners = () => {
             accept="image/jpeg,image/png,image/webp"
             onChange={handleFileChange}
             ref={fileInputRef}
-            required
+            required={!isEditing}
             className="mt-2 w-full rounded-xl border border-dashed border-slate-700 px-4 py-3 text-sm text-slate-300 outline-none transition file:mr-4 file:rounded-md file:border-0 file:bg-brand-primary file:px-3 file:py-2 file:text-sm file:font-semibold file:text-white hover:border-brand-primary focus:border-brand-primary focus:ring-1 focus:ring-brand-primary/40"
           />
         </div>
         <div className="flex justify-end gap-3">
           <button
             type="button"
-            onClick={resetForm}
+            onClick={isEditing ? handleCancelEdit : resetForm}
             className="rounded-full border border-slate-700 px-6 py-3 text-sm font-semibold text-slate-300 transition hover:border-brand-primary hover:text-white"
             disabled={isSubmitting}
           >
-            Làm mới
+            {resetLabel}
           </button>
           <button
             type="submit"
             disabled={isSubmitting}
             className="rounded-full bg-brand-primary px-6 py-3 text-sm font-semibold text-white transition hover:bg-brand-dark disabled:cursor-not-allowed disabled:bg-brand-dark/50"
           >
-            {isSubmitting ? "Đang tải lên..." : "Thêm banner"}
+            {submitLabel}
           </button>
         </div>
       </form>
@@ -224,16 +275,25 @@ const ManageBanners = () => {
                     rel="noreferrer"
                     className="inline-flex text-sm font-semibold text-brand-primary hover:text-brand-light"
                   >
-                    Xem đường dẫn →
+                    Xem đường dẫn
                   </a>
                 )}
-                <button
-                  type="button"
-                  onClick={() => handleDelete(banner._id)}
-                  className="mt-3 inline-flex items-center rounded-full border border-red-200 px-4 py-2 text-xs font-semibold text-red-400 transition hover:bg-red-500 hover:text-white"
-                >
-                  Xóa banner
-                </button>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleEdit(banner)}
+                    className="inline-flex items-center rounded-full border border-brand-primary/50 px-4 py-2 text-xs font-semibold text-brand-primary transition hover:bg-brand-primary hover:text-white"
+                  >
+                    Chỉnh sửa
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(banner._id)}
+                    className="inline-flex items-center rounded-full border border-red-200 px-4 py-2 text-xs font-semibold text-red-400 transition hover:bg-red-500 hover:text-white"
+                  >
+                    Xóa banner
+                  </button>
+                </div>
               </div>
             </div>
           ))
