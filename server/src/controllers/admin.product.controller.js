@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { Product } from "../models/Product.js";
+import { saveUploadedImage } from "../middleware/upload.js";
 
 const numberOrUndefined = (value) =>
   value === undefined || value === null || value === ""
@@ -340,7 +341,7 @@ export const adminUploadProductImage = asyncHandler(async (req, res) => {
     });
   }
 
-  const imageUrl = `/uploads/products/${req.file.filename}`;
+  const imageUrl = await saveUploadedImage(req.file, "products");
 
   res.status(201).json({
     success: true,

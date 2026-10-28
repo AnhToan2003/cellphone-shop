@@ -53,6 +53,7 @@ const initialState = {
   filters: {
     search: "",
     brand: "",
+    category: "",
     page: 1,
   },
 };

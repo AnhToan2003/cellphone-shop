@@ -1,4 +1,4 @@
-﻿import mongoose from "mongoose";
+import mongoose from "mongoose";
 
 const orderItemSchema = new mongoose.Schema(
   {
@@ -7,6 +7,10 @@ const orderItemSchema = new mongoose.Schema(
       ref: "Product",
       required: true,
     },
+    variantId: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: null,
+    },
     name: {
       type: String,
       required: true,
@@ -14,11 +18,6 @@ const orderItemSchema = new mongoose.Schema(
     price: {
       type: Number,
       required: true,
-      min: 0,
-    },
-    listedPrice: {
-      type: Number,
-      default: null,
       min: 0,
     },
     listedPrice: {
@@ -60,7 +59,8 @@ const shippingInfoSchema = new mongoose.Schema(
     },
     address: {
       type: String,
-      required: true,
+      default: "Nhận tại showroom Ngọc Triết Store",
+      trim: true,
     },
   },
   { _id: false }
@@ -99,43 +99,9 @@ const paymentSchema = new mongoose.Schema(
       enum: ["pending", "awaiting", "completed", "failed"],
       default: "pending",
     },
-    reference: {
-      type: String,
-      default: "",
-      trim: true,
-    },
     message: {
       type: String,
       default: "",
-    },
-    confirmedAt: {
-      type: Date,
-      default: null,
-    },
-    qrData: {
-      type: String,
-      default: "",
-      trim: true,
-    },
-    transferContent: {
-      type: String,
-      default: "",
-      trim: true,
-    },
-    quickLink: {
-      type: String,
-      default: "",
-      trim: true,
-    },
-    transactionNo: {
-      type: String,
-      default: "",
-      trim: true,
-    },
-    bankCode: {
-      type: String,
-      default: "",
-      trim: true,
     },
   },
   { _id: false }
@@ -159,7 +125,7 @@ const orderSchema = new mongoose.Schema(
     },
     paymentMethod: {
       type: String,
-      enum: ["cod", "vietqr"],
+      enum: ["cod", "store"],
       default: "cod",
     },
     payment: {
@@ -167,7 +133,6 @@ const orderSchema = new mongoose.Schema(
       default: () => ({
         provider: "cod",
         status: "pending",
-        qrData: "",
       }),
     },
     status: {

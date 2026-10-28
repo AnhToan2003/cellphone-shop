@@ -174,11 +174,10 @@ export const getOverviewStats = async (req, res, next) => {
     const totalRevenue =
       revenueResult.length > 0 ? revenueResult[0].total : 0;
 
-    const knownMethods = new Set(["cod", "vietqr"]);
+    const knownMethods = new Set(["cod"]);
 
     const paymentBreakdown = {
       cod: { revenue: 0, orders: 0, profit: 0 },
-      vietqr: { revenue: 0, orders: 0, profit: 0 },
       other: { revenue: 0, orders: 0, profit: 0 },
     };
 
@@ -205,7 +204,6 @@ export const getOverviewStats = async (req, res, next) => {
         timelineMap[dateKey] = {
           date: dateKey,
           cod: { revenue: 0, profit: 0 },
-          vietqr: { revenue: 0, profit: 0 },
           other: { revenue: 0, profit: 0 },
         };
       }
@@ -244,11 +242,9 @@ export const getOverviewStats = async (req, res, next) => {
       const entry = ensureTimelineEntry(dateKey);
       entry.totalRevenue =
         (entry.cod.revenue ?? 0) +
-        (entry.vietqr.revenue ?? 0) +
         (entry.other.revenue ?? 0);
       entry.totalProfit =
         (entry.cod.profit ?? 0) +
-        (entry.vietqr.profit ?? 0) +
         (entry.other.profit ?? 0);
 
       revenueTimeline.push(entry);

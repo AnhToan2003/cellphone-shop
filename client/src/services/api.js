@@ -33,6 +33,8 @@ export const deleteAdminUser = (userId) =>
 export const fetchAdminProducts = (params = {}) =>
   apiClient.get(`/admin/products${buildQueryString(params)}`);
 
+export const updateSpotlight = (payload) => apiClient.put("/spotlight", payload);
+
 export const uploadAdminProductImage = (formData) =>
   apiClient.post("/admin/products/upload", formData, {
     headers: { "Content-Type": "multipart/form-data" },
@@ -75,15 +77,11 @@ export const updateAdminOrderStatus = (orderId, payload) =>
 export const cancelMyOrder = (orderId) =>
   apiClient.patch(`/orders/${orderId}/cancel`);
 
-export const confirmMyOrderPayment = (orderId, config = undefined) =>
-  apiClient.patch(
-    `/orders/${orderId}/payment/confirm`,
-    undefined,
-    config
-  );
-
 export const fetchMyWarrantyItems = () =>
   apiClient.get("/orders/me/warranty");
+
+export const lookupWarrantyByPhone = (phone) =>
+  apiClient.get("/orders/warranty/lookup", { params: { phone } });
 
 export const fetchLatestProducts = (limit = 5) =>
   apiClient.get(`/products${buildQueryString({ limit })}`);
@@ -119,7 +117,25 @@ export const updateAdminBrand = (brandId, payload) =>
 export const deleteAdminBrand = (brandId) =>
   apiClient.delete(`/admin/brands/${brandId}`);
 
-export const sendSupportMessage = (payload) =>
-  apiClient.post("/support/chat", payload);
+export const fetchPublicCategories = () => apiClient.get("/categories");
+
+export const fetchAdminCategories = () => apiClient.get("/admin/categories");
+
+export const createAdminCategory = (payload) =>
+  apiClient.post("/admin/categories", payload);
+
+export const updateAdminCategory = (categoryId, payload) =>
+  apiClient.put(`/admin/categories/${categoryId}`, payload);
+
+export const deleteAdminCategory = (categoryId) =>
+  apiClient.delete(`/admin/categories/${categoryId}`);
+
+export const addAdminSubCategory = (categoryId, subCategory) =>
+  apiClient.post(`/admin/categories/${categoryId}/subcategories`, { subCategory });
+
+export const deleteAdminSubCategory = (categoryId, subCategory) =>
+  apiClient.delete(`/admin/categories/${categoryId}/subcategories`, {
+    data: { subCategory },
+  });
 
 export default apiClient;

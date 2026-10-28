@@ -10,7 +10,7 @@
 
 ### Yêu cầu
 
-- Node.js 18+  
+- Node.js 22.x
 - MongoDB (local hoặc hosted)
 
 ### Cài đặt
@@ -31,15 +31,12 @@ MONGODB_URI=mongodb://localhost:27017/cellphones-shop
 JWT_SECRET=your-strong-secret
 CLIENT_URL=http://localhost:5173
 CLIENT_URLS=http://localhost:5173,http://localhost:5174,http://localhost:4173
-OLLAMA_URL=http://localhost:11434
-OLLAMA_MODEL=qwen2.5:3b
 ```
 
 Tùy chọn `client/.env`:
 
 ```
 VITE_API_URL=http://localhost:5000/api
-VITE_VIETQR_PORTAL_URL=http://localhost:5500/pay
 ```
 
 ### Sử dụng
@@ -68,17 +65,35 @@ VITE_VIETQR_PORTAL_URL=http://localhost:5500/pay
   npm run build
   ```
 
-- Chạy trang thanh toán VietQR mẫu (cổng 5500):
+- Chạy kiểm thử backend và giao diện (Playwright kiểm tra luồng mua cơ bản và các viewport từ 320px đến 1440px):
 
   ```bash
-  npm install --prefix vietqr-demo
-  npm run --prefix vietqr-demo start
+  npm run test:all
   ```
 
-### Tài khoản mặc định
+### Triển khai lên Vercel
 
-- Email: `admin@cellphones-shop.dev`  
-- Mật khẩu: `123456!`
+Project đã có `vercel.json` cho Vite SPA và Express API. Trước khi deploy, tạo project MongoDB có thể truy cập từ Vercel và cấu hình các biến môi trường Production trong Vercel: `MONGODB_URI`, `JWT_SECRET` (chuỗi ngẫu nhiên dài ít nhất 32 ký tự), `CLIENT_URL` (domain production chính thức) và `BLOB_READ_WRITE_TOKEN` (Vercel Blob để lưu ảnh tải lên). Chỉ `VITE_*` mới được đưa vào bundle client; không đặt bí mật ở các biến này.
+
+Đăng nhập Vercel CLI, liên kết project rồi triển khai:
+
+```bash
+npx vercel login
+npx vercel link
+npx vercel deploy --prod
+```
+
+Tạo tài khoản admin riêng bằng `ADMIN_EMAIL`, `ADMIN_USERNAME`, `ADMIN_PASSWORD` và kết nối tới cùng `MONGODB_URI`, sau đó chạy `npm run seed:admin` một lần. Không dùng database local hoặc token mẫu cho production. Vercel CLI cần đăng nhập và các biến môi trường production phải được cấu hình trước khi ứng dụng có thể vận hành đầy đủ.
+
+### Tạo tài khoản quản trị
+
+Hệ thống không còn tự tạo tài khoản quản trị với mật khẩu mặc định. Sao chép `server/.env.example` thành `server/.env`, đặt `ADMIN_EMAIL`, `ADMIN_USERNAME` và một `ADMIN_PASSWORD` riêng có ít nhất 12 ký tự, sau đó chạy:
+
+```bash
+npm run seed:admin
+```
+
+Không dùng mật khẩu mẫu trong môi trường production.
 
 ### Cấu trúc thư mục
 

@@ -16,8 +16,8 @@ export const errorHandler = (err, req, res, next) => {
   };
 
   if (err instanceof ZodError) {
-    payload.message = "Trùng gmail";
-    payload.errors = err.errors.map((issue) => ({
+    payload.message = "Dữ liệu gửi lên không hợp lệ";
+    payload.errors = err.issues.map((issue) => ({
       path: issue.path.join("."),
       message: issue.message,
     }));

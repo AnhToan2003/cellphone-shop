@@ -1,42 +1,36 @@
-﻿import { createBrowserRouter } from "react-router-dom";
+import { lazy } from "react";
+import { createBrowserRouter } from "react-router-dom";
 
 import PublicLayout from "../App.jsx";
 import ProtectedRoute from "../components/ProtectedRoute.jsx";
 import AdminRoute from "../routes/AdminRoute.jsx";
 import AdminLayout from "../pages/admin/AdminLayout.jsx";
-import AdminDashboard from "../pages/admin/AdminDashboard.jsx";
-import ManageUsers from "../pages/admin/ManageUsers.jsx";
-import ManageUserRanks from "../pages/admin/ManageUserRanks.jsx";
-import ManageProducts from "../pages/admin/ManageProducts.jsx";
-import ManageBanners from "../pages/admin/ManageBanners.jsx";
-import ManageOrders from "../pages/admin/ManageOrders.jsx";
-import ManageWarranty from "../pages/admin/ManageWarranty.jsx";
-import ManagePromotions from "../pages/admin/ManagePromotions.jsx";
-import ManageCategories from "../pages/admin/ManageCategories.jsx";
-import ManageBrands from "../pages/admin/ManageBrands.jsx";
-import Cart from "../pages/Cart.jsx";
-import Checkout from "../pages/Checkout.jsx";
-import Orders from "../pages/Orders.jsx";
-import PublicHome from "../pages/PublicHome.jsx";
-import Login from "../pages/Login.jsx";
-import ProductDetail from "../pages/ProductDetail.jsx";
-import Register from "../pages/Register.jsx";
-import AboutPage from "../pages/About.jsx";
-import Favorites from "../pages/Favorites.jsx";
-import ViewHistory from "../pages/ViewHistory.jsx";
-import AllProducts from "../pages/AllProducts.jsx";
-import Profile from "../pages/Profile.jsx";
-import WarrantyPolicy from "../pages/WarrantyPolicy.jsx";
-import PaymentReturn from "../pages/PaymentReturn.jsx";
-import PortActivity from "../pages/Port.jsx";
-import ProductList from "../pages/ProductList.jsx";
 
-const NotFound = () => (
-  <div className="container-safe py-20 text-center">
-    <h1 className="text-3xl font-bold text-slate-900">404</h1>
-    <p className="mt-4 text-slate-500">Không tìm thấy trang bạn yêu cầu.</p>
-  </div>
-);
+const AdminDashboard = lazy(() => import("../pages/admin/AdminDashboard.jsx"));
+const ManageUsers = lazy(() => import("../pages/admin/ManageUsers.jsx"));
+const ManageUserRanks = lazy(() => import("../pages/admin/ManageUserRanks.jsx"));
+const ManageProducts = lazy(() => import("../pages/admin/ManageProducts.jsx"));
+const ManageBanners = lazy(() => import("../pages/admin/ManageBanners.jsx"));
+const ManageOrders = lazy(() => import("../pages/admin/ManageOrders.jsx"));
+const ManageWarranty = lazy(() => import("../pages/admin/ManageWarranty.jsx"));
+const ManagePromotions = lazy(() => import("../pages/admin/ManagePromotions.jsx"));
+const ManageCategories = lazy(() => import("../pages/admin/ManageCategories.jsx"));
+const ManageProductCategories = lazy(() => import("../pages/admin/ManageProductCategories.jsx"));
+const ManageBrands = lazy(() => import("../pages/admin/ManageBrands.jsx"));
+const Cart = lazy(() => import("../pages/Cart.jsx"));
+const Checkout = lazy(() => import("../pages/Checkout.jsx"));
+const Orders = lazy(() => import("../pages/Orders.jsx"));
+const PublicHome = lazy(() => import("../pages/PublicHome.jsx"));
+const Login = lazy(() => import("../pages/Login.jsx"));
+const ProductDetail = lazy(() => import("../pages/ProductDetail.jsx"));
+const Register = lazy(() => import("../pages/Register.jsx"));
+const AboutPage = lazy(() => import("../pages/About.jsx"));
+const Favorites = lazy(() => import("../pages/Favorites.jsx"));
+const AllProducts = lazy(() => import("../pages/AllProducts.jsx"));
+const Profile = lazy(() => import("../pages/Profile.jsx"));
+const WarrantyPolicy = lazy(() => import("../pages/WarrantyPolicy.jsx"));
+const ProductList = lazy(() => import("../pages/ProductList.jsx"));
+const NotFound = lazy(() => import("../pages/NotFound.jsx"));
 
 export const router = createBrowserRouter([
   {
@@ -72,25 +66,15 @@ export const router = createBrowserRouter([
           </ProtectedRoute>
         ),
       },
-      {
-        path: "warranty",
-        element: (
-          <ProtectedRoute>
-            <WarrantyPolicy />
-          </ProtectedRoute>
-        ),
-      },
-      { path: "payment-return", element: <PaymentReturn /> },
+      { path: "warranty", element: <WarrantyPolicy /> },
       { path: "register", element: <Register /> },
       { path: "about", element: <AboutPage /> },
       { path: "faq", element: <AboutPage initialSection="faq" /> },
       { path: "products", element: <AllProducts /> },
-      { path: "history", element: <ViewHistory /> },
       { path: "*", element: <NotFound /> },
     ],
   },
   { path: "/login", element: <Login /> },
-  { path: "/port", element: <PortActivity /> },
   {
     path: "/admin",
     element: (
@@ -103,6 +87,7 @@ export const router = createBrowserRouter([
       { path: "users", element: <ManageUsers /> },
       { path: "user-rankings", element: <ManageUserRanks /> },
       { path: "products", element: <ManageProducts /> },
+      { path: "categories", element: <ManageProductCategories /> },
       { path: "orders", element: <ManageOrders /> },
       { path: "warranty", element: <ManageWarranty /> },
       { path: "promotions", element: <ManagePromotions /> },

@@ -1,12 +1,16 @@
 import { User } from "../models/User.js";
 
-const ADMIN_DEFAULT_PASSWORD = "123456";
-
 export const seedAdmin = async () => {
-  const adminUsername = process.env.ADMIN_USERNAME || "Admin";
+  const adminUsername = process.env.ADMIN_USERNAME;
+  const adminEmail = process.env.ADMIN_EMAIL?.toLowerCase();
+  const adminPassword = process.env.ADMIN_PASSWORD;
+
+  if (!adminUsername || !adminEmail || !adminPassword || adminPassword.length < 12) {
+    throw new Error(
+      "Set ADMIN_USERNAME, ADMIN_EMAIL, and a unique ADMIN_PASSWORD with at least 12 characters before seeding an admin."
+    );
+  }
   const adminUsernameLower = adminUsername.toLowerCase();
-  const adminEmail =
-    (process.env.ADMIN_EMAIL || "admin@cellphoneshop.local").toLowerCase();
 
   const existing =
     (await User.findOne({ usernameLower: adminUsernameLower })) ||
@@ -38,38 +42,34 @@ export const seedAdmin = async () => {
     let hasCorrectPassword = false;
     try {
       hasCorrectPassword = await existing.comparePassword(
-        ADMIN_DEFAULT_PASSWORD
+        adminPassword
       );
     } catch {
       hasCorrectPassword = false;
     }
 
     if (!hasCorrectPassword) {
-      existing.password = ADMIN_DEFAULT_PASSWORD;
+      existing.password = adminPassword;
       needsSave = true;
     }
 
     if (needsSave) {
       await existing.save();
-      console.log(
-        `Admin account refreshed: username=${adminUsername} / password=${ADMIN_DEFAULT_PASSWORD}`
-      );
+      console.log(`Admin account refreshed: username=${adminUsername}`);
     }
 
     return;
   }
 
   await User.create({
-    name: "Cellphone Shop Admin",
+    name: "NgocTrietStore",
     username: adminUsername,
     email: adminEmail,
-    password: ADMIN_DEFAULT_PASSWORD,
+    password: adminPassword,
     role: "admin",
   });
 
-  console.log(
-    `Admin account ensured: username=${adminUsername} / password=${ADMIN_DEFAULT_PASSWORD}`
-  );
+  console.log(`Admin account ensured: username=${adminUsername}`);
 };
 
 export default seedAdmin;

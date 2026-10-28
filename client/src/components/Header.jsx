@@ -1,14 +1,21 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
+import { Link, NavLink, useNavigate, useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { FiLogOut, FiMapPin, FiUser } from "react-icons/fi";
-import { HiOutlineShoppingBag } from "react-icons/hi";
-import { RiSearchLine } from "react-icons/ri";
-import { AiOutlineHeart } from "react-icons/ai";
+import {
+  FiSearch,
+  FiShoppingBag,
+  FiHeart,
+  FiUser,
+  FiMenu,
+  FiX,
+  FiChevronDown,
+  FiArrowRight,
+} from "react-icons/fi";
 
-import { setFilters } from "../store/slices/productSlice.js";
 import { useAuth } from "../context/AuthContext.jsx";
+import { setFilters } from "../store/slices/productSlice.js";
 import { getProductImage } from "../utils/assets.js";
+import { fetchPublicCategories } from "../services/api.js";
 
 const TIER_LABELS = {
   bronze: "Đồng",
@@ -17,15 +24,118 @@ const TIER_LABELS = {
   diamond: "Kim cương",
 };
 
-const Header = () => {
+const APPLE_NAV_CATALOG = [
+  {
+    name: "iPhone",
+    to: "/products?category=iPhone",
+    badge: "Hot",
+    subCategories: [
+      { name: "iPhone 16 Series", desc: "16 Pro Max, 16 Pro, 16 Plus, 16", to: "/products?category=iPhone&subCategory=iPhone+16+Series" },
+      { name: "iPhone 15 Series", desc: "15 Pro Max, 15 Pro, 15", to: "/products?category=iPhone&subCategory=iPhone+15+Series" },
+      { name: "iPhone 14 Series", desc: "14 Pro Max, 14 Plus, 14", to: "/products?category=iPhone&subCategory=iPhone+14+Series" },
+      { name: "iPhone 13 Series", desc: "iPhone 13 quốc dân pin trâu", to: "/products?category=iPhone&subCategory=iPhone+13+Series" },
+      { name: "iPhone 12 & Cũ hơn", desc: "iPhone 12, iPhone 11 giá cực tốt", to: "/products?category=iPhone&subCategory=iPhone+12+%26+C%C5%A9+h%C6%A1n" },
+    ],
+  },
+  {
+    name: "iPad",
+    to: "/products?category=iPad",
+    badge: "M4",
+    subCategories: [
+      { name: "iPad Pro", desc: "Chip M4 Tandem OLED 11\" & 13\"", to: "/products?category=iPad&subCategory=iPad+Pro" },
+      { name: "iPad Air", desc: "Chip M2 mạnh mẽ đồ họa", to: "/products?category=iPad&subCategory=iPad+Air" },
+      { name: "iPad Gen", desc: "iPad Gen 10 10.9\", Gen 9", to: "/products?category=iPad&subCategory=iPad+Gen" },
+      { name: "iPad Mini", desc: "iPad Mini 6 nhỏ gọn đa năng", to: "/products?category=iPad&subCategory=iPad+Mini" },
+    ],
+  },
+  {
+    name: "Mac",
+    to: "/products?category=Mac",
+    badge: "M3",
+    subCategories: [
+      { name: "MacBook Pro", desc: "14\" & 16\" chip M3 Pro / M3 Max", to: "/products?category=Mac&subCategory=MacBook+Pro" },
+      { name: "MacBook Air", desc: "13\" & 15\" chip M3 / M2 siêu nhẹ", to: "/products?category=Mac&subCategory=MacBook+Air" },
+      { name: "iMac & Mac Mini", desc: "iMac 24\" M3, Mac mini M2 bàn làm việc", to: "/products?category=Mac&subCategory=iMac+%26+Mac+Mini" },
+    ],
+  },
+  {
+    name: "Watch",
+    to: "/products?category=Apple Watch",
+    badge: "S10",
+    subCategories: [
+      { name: "Apple Watch Ultra", desc: "Ultra 2 Titanium 49mm thám hiểm", to: "/products?category=Apple+Watch&subCategory=Apple+Watch+Ultra" },
+      { name: "Apple Watch Series", desc: "Series 10 Nhôm 42mm & 46mm mỏng nhất", to: "/products?category=Apple+Watch&subCategory=Apple+Watch+Series" },
+      { name: "Apple Watch SE", desc: "SE 2 theo dõi sức khỏe giá hợp lý", to: "/products?category=Apple+Watch&subCategory=Apple+Watch+SE" },
+    ],
+  },
+  {
+    name: "Phụ kiện",
+    to: "/products?category=Phụ kiện",
+    badge: "Chính hãng",
+    subCategories: [
+      { name: "Tai nghe & AirPods", desc: "AirPods Pro 2, AirPods 4 ANC, AirPods Max", to: "/products?category=Ph%E1%BB%A5+ki%E1%BB%87n&subCategory=Tai+nghe+%26+AirPods" },
+      { name: "Củ sạc & Cáp sạc", desc: "Sạc nhanh 20W, 35W Dual, Cáp dù 60W", to: "/products?category=Ph%E1%BB%A5+ki%E1%BB%87n&subCategory=C%E1%BB%A7+s%E1%BA%A1c+%26+C%C3%A1p+s%E1%BA%A1c" },
+      { name: "Ốp lưng & Bao da", desc: "Silicone Case MagSafe, Clear Case", to: "/products?category=Ph%E1%BB%A5+ki%E1%BB%87n&subCategory=%E1%BB%90p+l%C6%B0ng+%26+Bao+da" },
+      { name: "Apple Pencil & Bàn phím", desc: "Pencil Pro, Magic Keyboard iPad M4, Magic Mouse", to: "/products?category=Ph%E1%BB%A5+ki%E1%BB%87n&subCategory=Apple+Pencil+%26+B%C3%A0n+ph%C3%ADm" },
+    ],
+  },
+];
+
+export default function Header() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const location = useLocation();
+
   const [query, setQuery] = useState("");
   const [showFavorites, setShowFavorites] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isCompact, setIsCompact] = useState(false);
-  const [hidden, setHidden] = useState(false);
+  const [activeMegaCategory, setActiveMegaCategory] = useState(null);
+  const [mobileExpandedCat, setMobileExpandedCat] = useState(null);
+  const [navCatalog, setNavCatalog] = useState(APPLE_NAV_CATALOG);
+
+  useEffect(() => {
+    let active = true;
+    const loadCategories = async () => {
+      try {
+        const res = await fetchPublicCategories();
+        if (active && Array.isArray(res.data?.data) && res.data.data.length > 0) {
+          const dynamic = res.data.data.map((c) => {
+            const staticMatch = APPLE_NAV_CATALOG.find(
+              (s) => s.name.toLowerCase() === c.name.toLowerCase()
+            );
+            return {
+              name: c.name,
+              to: `/products?category=${encodeURIComponent(c.name)}`,
+              badge: staticMatch?.badge || (c.subCategories?.length ? `${c.subCategories.length} dòng` : ""),
+              subCategories: (c.subCategories || []).map((sub) => {
+                const staticSub = staticMatch?.subCategories?.find(
+                  (s) => s.name.toLowerCase() === sub.toLowerCase()
+                );
+                return {
+                  name: sub,
+                  desc: staticSub?.desc || `Sản phẩm ${sub} chính hãng`,
+                  to: `/products?category=${encodeURIComponent(c.name)}&subCategory=${encodeURIComponent(sub)}`,
+                };
+              }),
+            };
+          });
+          setNavCatalog(dynamic);
+        }
+      } catch {
+        // keep fallback
+      }
+    };
+    loadCategories();
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const favoritesRef = useRef(null);
+  const userMenuRef = useRef(null);
+  const megaMenuTimeoutRef = useRef(null);
 
   const { user, logout, isAdmin, isAuthenticated } = useAuth();
   const cartCount = useSelector((state) => state.cart.totalQuantity);
@@ -39,45 +149,38 @@ const Header = () => {
     setQuery(productFilters.search ?? "");
   }, [productFilters.search]);
 
+  // Click outside handlers
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (!favoritesRef.current) return;
-      if (!favoritesRef.current.contains(event.target)) {
+      if (favoritesRef.current && !favoritesRef.current.contains(event.target)) {
         setShowFavorites(false);
+      }
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
+        setShowUserMenu(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // Close menus on route change
   useEffect(() => {
     setShowFavorites(false);
+    setShowUserMenu(false);
+    setIsMobileMenuOpen(false);
+    setActiveMegaCategory(null);
   }, [location.pathname, location.search]);
 
+  // Scroll header shrink
   useEffect(() => {
-    const handler = setTimeout(() => {
-      dispatch(setFilters({ search: query.trim(), page: 1 }));
-    }, 250);
-    return () => clearTimeout(handler);
-  }, [dispatch, query]);
-
-  useEffect(() => {
-    let lastScrollY = window.scrollY;
     const handleScroll = () => {
-      const current = window.scrollY;
-      setIsCompact(current > 40);
-      if (current > lastScrollY + 10 && current > 120) {
-        setHidden(true);
-      } else if (current < lastScrollY - 10) {
-        setHidden(false);
-      }
-      lastScrollY = current;
+      setIsCompact(window.scrollY > 20);
     };
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const handleSubmit = (event) => {
+  const handleSearchSubmit = (event) => {
     event.preventDefault();
     const trimmed = query.trim();
     dispatch(setFilters({ search: trimmed, page: 1 }));
@@ -85,261 +188,474 @@ const Header = () => {
     if (trimmed) {
       params.set("search", trimmed);
     }
-    navigate(
-      { pathname: "/", search: params.toString() || undefined },
-      { replace: location.pathname === "/" }
-    );
+    navigate({ pathname: "/products", search: params.toString() || undefined });
   };
 
-  const chipPadding = isCompact ? "py-1 text-xs" : "py-1.5 text-sm";
-  const chipGhost =
-    "border-white/25 bg-white/10 text-white hover:border-white/60 hover:bg-white/20 hover:text-white";
-  const chipActive =
-    "border-white bg-white text-brand-primary shadow-lg shadow-white/30";
-  const actionChipBase =
-    "rounded-full border px-4 font-semibold backdrop-blur transition duration-200 hover:-translate-y-0.5 flex items-center justify-center gap-2";
-  const actionChip = `${actionChipBase} ${chipGhost}`;
+  const handleMouseEnterNav = (cat) => {
+    if (megaMenuTimeoutRef.current) {
+      clearTimeout(megaMenuTimeoutRef.current);
+    }
+    setActiveMegaCategory(cat);
+  };
+
+  const handleMouseLeaveNav = () => {
+    megaMenuTimeoutRef.current = setTimeout(() => {
+      setActiveMegaCategory(null);
+    }, 150);
+  };
 
   return (
     <header
-      className={`sticky top-0 z-40 w-full transition-transform duration-300 ${
-        hidden ? "-translate-y-full" : "translate-y-0"
-      }`}
+      className="sticky top-0 z-40 w-full transition-all duration-300"
+      onMouseLeave={handleMouseLeaveNav}
     >
+      {/* Main Apple-style Minimalist Header */}
       <div
-        className={`relative bg-gradient-to-r from-brand-primary via-brand-dark to-slate-900 text-white shadow-header transition-all duration-300 ${
-          isCompact ? "py-2" : "py-4"
+        className={`bg-slate-950/90 backdrop-blur-xl border-b border-white/10 text-white shadow-2xl transition-all duration-300 ${
+          isCompact ? "py-2.5" : "py-3.5"
         }`}
       >
-        <span aria-hidden className="pointer-events-none absolute inset-0 bg-hero-glow opacity-60" />
-        <span
-          aria-hidden
-          className="pointer-events-none absolute -left-16 top-0 h-full w-48 rounded-full bg-white/10 blur-3xl"
-        />
-        <div className="container-safe relative z-10 flex flex-col gap-3">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex min-w-[220px] items-center gap-3">
-              <Link
-                to="/"
-                className={`flex items-center gap-2 font-display font-semibold uppercase tracking-tight text-white transition hover:text-white/80 ${
-                  isCompact ? "text-xl" : "text-2xl"
-                }`}
-              >
-                <span className="rounded-full bg-white px-3 py-1 text-brand-primary shadow">
-                  Cellphone
-                </span>
-                <span>Shop</span>
-              </Link>
-              <div className="hidden items-center gap-2 rounded-full border border-white/20 px-3 py-1.5 text-sm text-white/80 lg:flex">
-                <FiMapPin size={18} />
-                <div className="leading-tight">
-                  <p className="text-[10px] uppercase tracking-[0.4em] text-white/60">Giao đến</p>
-                  <p className="text-sm font-semibold text-white">TP. Hồ Chí Minh</p>
-                </div>
-              </div>
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 flex items-center justify-between gap-2 sm:gap-4">
+          {/* Logo & Brand Name */}
+          <Link to="/" className="flex min-w-0 items-center gap-2 sm:gap-3 group shrink">
+            <div className="relative">
+              <img
+                src="/logo.jpg"
+                alt="Ngọc Triết Store"
+                className="h-9 w-9 sm:h-10 sm:w-10 md:h-11 md:w-11 rounded-full border border-white/20 object-cover shadow-lg transition-transform duration-300 group-hover:scale-105"
+              />
             </div>
+            <div className="flex flex-col">
+              <span className="font-display text-base md:text-lg font-bold tracking-tight text-white group-hover:text-slate-300 transition">
+                NGỌC TRIẾT
+              </span>
+              <span className="text-[9px] md:text-[10px] font-medium tracking-[0.2em] text-slate-400 uppercase">
+                Apple Specialist
+              </span>
+            </div>
+          </Link>
 
-            <form
-              onSubmit={handleSubmit}
-              className={`flex flex-1 min-w-[280px] items-center gap-3 rounded-full border border-white/20 px-4 text-white shadow-halo backdrop-blur transition-all duration-300 ${
-                isCompact ? "bg-white/15 py-1.5" : "bg-white/10 py-2"
-              }`}
+          {/* Desktop Navigation Links with Mega Menu Hover */}
+          <nav className="hidden lg:flex items-center gap-1 text-xs xl:text-sm font-medium text-slate-300">
+            <NavLink
+              to="/"
+              end
+              className={({ isActive }) =>
+                `px-3 py-1.5 rounded-full transition-all duration-200 ${
+                  isActive
+                    ? "text-white bg-white/15 font-semibold shadow-sm"
+                    : "hover:text-white hover:bg-white/5"
+                }`
+              }
             >
-              <label htmlFor="global-search" className="sr-only">
-                Tìm kiếm sản phẩm
-              </label>
-              <RiSearchLine className="text-white/70" size={20} />
-                <input
-                  id="global-search"
-                  type="search"
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                  placeholder="Tìm iPhone, Samsung, Xiaomi..."
-                  className="w-full border-none bg-transparent text-sm text-white placeholder:text-white/70 outline-none focus:bg-transparent focus:ring-0 caret-white"
-                />
-              <button
-                type="submit"
-                className="rounded-full bg-gradient-to-r from-white to-white px-4 py-1.5 text-sm font-semibold text-brand-primary shadow transition hover:-translate-y-0.5 hover:from-brand-light hover:to-brand-dark hover:text-white"
-              >
-                Tìm kiếm
-              </button>
-            </form>
+              Trang chủ
+            </NavLink>
 
-            <div className="flex flex-wrap items-center justify-end gap-2 lg:flex-nowrap lg:justify-end">
-              <div className="flex items-center gap-2 rounded-full border border-white/30 px-3 py-1.5 text-xs text-white/80 lg:hidden">
-                <FiMapPin size={16} />
-                <span>TP. Hồ Chí Minh</span>
-              </div>
-
-              <div className="relative" ref={favoritesRef}>
-                <button
-                  type="button"
-                  onClick={() => setShowFavorites((prev) => !prev)}
-                  className={`${actionChip} ${chipPadding} ${favoritesCount ? "bg-white/10" : ""}`}
+            {navCatalog.map((cat) => {
+              const isHovered = activeMegaCategory?.name === cat.name;
+              return (
+                <div
+                  key={cat.name}
+                  className="relative"
+                  onMouseEnter={() => handleMouseEnterNav(cat)}
                 >
-                  <AiOutlineHeart size={18} />
-                  <span>Yêu thích</span>
-                  {favoritesCount > 0 && (
-                    <span className="ml-1 flex h-5 w-5 items-center justify-center rounded-full bg-white text-xs font-semibold text-brand-primary">
-                      {favoritesCount}
-                    </span>
-                  )}
-                </button>
-                {showFavorites && (
-                  <div className="absolute right-0 top-[115%] z-50 w-[320px] rounded-3xl border border-slate-100 bg-white/95 p-5 text-left text-slate-700 shadow-2xl">
-                    <div className="mb-3 flex items-center justify-between text-xs uppercase tracking-[0.3em] text-slate-400">
-                      <span>YÊU THÍCH</span>
-                      <span>
-                        {Math.min(favoritesPreview.length, favoritesCount)}/{favoritesCount}
-                      </span>
-                    </div>
-                    {favoritesPreview.length ? (
-                      <div className="space-y-3">
-                        {favoritesPreview.map((item) => (
-                          <Link
-                            key={item._id}
-                            to={`/product/${item.slug}`}
-                            className="flex items-center gap-3 rounded-2xl border border-slate-100 px-3 py-2 transition hover:border-brand-primary/60 hover:bg-slate-50"
-                            onClick={() => setShowFavorites(false)}
-                          >
-                            <img
-                              src={getProductImage(item, "https://placehold.co/48x48?text=No+Image")}
-                              alt={item.name}
-                              className="h-12 w-12 rounded-xl object-cover"
-                            />
-                            <div className="flex-1">
-                              <p className="text-sm font-semibold text-slate-900 line-clamp-1">
-                                {item.name}
-                              </p>
-                              <p className="text-xs text-slate-500 line-clamp-1">{item.brand}</p>
-                            </div>
-                            <span className="text-xs font-semibold text-brand-primary">Xem</span>
-                          </Link>
-                        ))}
-                        {favoritesCount > favoritesPreview.length && (
-                          <p className="text-xs text-slate-500">
-                            +{favoritesCount - favoritesPreview.length} mục khác trong danh sách.
-                          </p>
-                        )}
-                      </div>
-                    ) : (
-                      <p className="rounded-2xl bg-slate-100 p-4 text-sm text-slate-500">
-                        Chưa có sản phẩm yêu thích.
-                      </p>
-                    )}
-                    <Link
-                      to="/favorites"
-                      className="mt-4 inline-flex w-full items-center justify-center rounded-full bg-brand-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark"
-                      onClick={() => setShowFavorites(false)}
-                    >
+                  <NavLink
+                    to={cat.to}
+                    className={({ isActive }) =>
+                      `flex items-center gap-1 px-3 py-1.5 rounded-full transition-all duration-200 ${
+                        isActive || isHovered
+                          ? "text-white bg-white/15 font-semibold shadow-sm"
+                          : "hover:text-white hover:bg-white/5"
+                      }`
+                    }
+                  >
+                    <span>{cat.name}</span>
+                    <FiChevronDown
+                      size={12}
+                      className={`text-slate-400 transition-transform duration-200 ${
+                        isHovered ? "rotate-180 text-white" : ""
+                      }`}
+                    />
+                  </NavLink>
+                </div>
+              );
+            })}
+
+            <NavLink
+              to="/about"
+              className={({ isActive }) =>
+                `px-3 py-1.5 rounded-full transition-all duration-200 ${
+                  isActive
+                    ? "text-white bg-white/15 font-semibold shadow-sm"
+                    : "hover:text-white hover:bg-white/5"
+                }`
+              }
+            >
+              Giới thiệu
+            </NavLink>
+          </nav>
+
+          {/* Search Bar */}
+          <form
+            onSubmit={handleSearchSubmit}
+            className="hidden md:flex flex-1 max-w-xs xl:max-w-sm items-center gap-2 rounded-full bg-white/5 border border-white/10 px-3.5 py-1.5 text-sm text-white focus-within:border-white/30 focus-within:bg-white/10 transition duration-200"
+          >
+            <FiSearch className="text-slate-400 shrink-0" size={15} />
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Tìm iPhone 16 Pro, iPad M4..."
+              className="w-full bg-transparent border-none outline-none text-xs text-white placeholder:text-slate-400"
+            />
+            {query && (
+              <button
+                type="button"
+                onClick={() => {
+                  setQuery("");
+                  dispatch(setFilters({ search: "", page: 1 }));
+                }}
+                className="text-slate-400 hover:text-white"
+              >
+                <FiX size={13} />
+              </button>
+            )}
+          </form>
+
+          {/* Action Icons */}
+          <div className="flex shrink-0 items-center gap-1 sm:gap-2">
+            {/* Favorites Button & Dropdown */}
+            <div className="relative" ref={favoritesRef}>
+              <button
+                type="button"
+                onClick={() => setShowFavorites((prev) => !prev)}
+                className="relative flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full bg-white/5 border border-white/10 text-slate-300 hover:text-white hover:bg-white/10 transition"
+                aria-label="Sản phẩm yêu thích"
+              >
+                <FiHeart size={16} />
+                {favoritesCount > 0 && (
+                  <span className="absolute -top-1 -right-1 flex h-4 min-w-[16px] px-1 items-center justify-center rounded-full bg-rose-500 text-[9px] font-bold text-white shadow">
+                    {favoritesCount}
+                  </span>
+                )}
+              </button>
+
+              {/* Favorites Popover */}
+              {showFavorites && (
+                <div className="absolute right-0 top-full mt-2 z-50 w-80 rounded-2xl border border-white/10 bg-slate-950/95 p-4 text-slate-200 shadow-2xl backdrop-blur-xl animate-fade-in-up">
+                  <div className="mb-3 flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-400 border-b border-white/10 pb-2">
+                    <span>Yêu thích ({favoritesCount})</span>
+                    <Link to="/favorites" className="text-blue-400 hover:underline">
                       Xem tất cả
                     </Link>
                   </div>
-                )}
-              </div>
-
-              <NavLink
-                to="/about"
-                className={({ isActive }) =>
-                  `${actionChipBase} ${chipPadding} ${isActive ? chipActive : chipGhost}`
-                }
-              >
-                Về chúng tôi
-              </NavLink>
-
-              <NavLink
-                to="/history"
-                className={({ isActive }) =>
-                  `${actionChipBase} ${chipPadding} ${isActive ? chipActive : chipGhost}`
-                }
-              >
-                Đã xem
-              </NavLink>
-
-              <NavLink
-                to="/products"
-                className={({ isActive }) =>
-                  `${actionChipBase} ${chipPadding} ${isActive ? chipActive : chipGhost}`
-                }
-              >
-                Tất cả sản phẩm
-              </NavLink>
-
-              <NavLink
-                to="/cart"
-                className={({ isActive }) =>
-                  `${actionChipBase} ${chipPadding} ${isActive ? chipActive : chipGhost}`
-                }
-              >
-                <HiOutlineShoppingBag size={20} />
-                <span>Giỏ hàng</span>
-                {cartCount > 0 && (
-                  <span className="ml-1 flex h-5 w-5 items-center justify-center rounded-full bg-white text-xs font-semibold text-brand-primary">
-                    {cartCount}
-                  </span>
-                )}
-              </NavLink>
-
-              {isAuthenticated ? (
-                <>
-                  <div className={`${actionChip} ${chipPadding}`}>
-                    <FiUser size={18} />
-                    <div className="hidden flex-col text-left leading-tight sm:flex">
-                      <span className="text-xs text-white/70">{user.email}</span>
-                      <span className="text-sm font-semibold text-white">
-                        {user.name?.split?.(" ")?.[0] || "Tài khoản"}
-                      </span>
-                      {tierLabel ? (
-                        <span className="text-[10px] font-medium uppercase tracking-wide text-white/60">
-                          {tierLabel}
-                        </span>
-                      ) : null}
+                  {favoritesPreview.length > 0 ? (
+                    <div className="space-y-2">
+                      {favoritesPreview.map((item) => (
+                        <Link
+                          key={item._id}
+                          to={`/product/${item.slug}`}
+                          className="flex items-center gap-3 rounded-xl border border-white/5 bg-white/5 p-2 hover:bg-white/10 transition"
+                        >
+                          <img
+                            src={getProductImage(item, "https://placehold.co/48x48?text=Apple")}
+                            alt={item.name}
+                            className="h-10 w-10 rounded-lg object-contain bg-white/5"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-bold text-white truncate">{item.name}</p>
+                            <p className="text-[11px] text-blue-400 font-semibold">
+                              {(item.finalPrice ?? item.price ?? 0).toLocaleString("vi-VN")}₫
+                            </p>
+                          </div>
+                        </Link>
+                      ))}
                     </div>
-                    <span className="text-sm font-semibold text-white sm:hidden">
-                      {user.name?.split?.(" ")?.[0] || "Tài khoản"}
-                    </span>
-                  </div>
-                  <Link to="/profile" className={`${actionChip} ${chipPadding}`}>
-                    Hồ sơ
-                  </Link>
-                  <Link
-                    to={isAdmin ? "/admin" : "/orders"}
-                    className={`${actionChip} ${chipPadding}`}
-                  >
-                    {isAdmin ? "Quản trị" : "Đơn hàng"}
-                  </Link>
-                  <Link to="/warranty" className={`${actionChip} ${chipPadding}`}>
-                    Bảo hành
-                  </Link>
-                  <button
-                    type="button"
-                    onClick={logout}
-                    className={`${actionChip} ${chipPadding}`}
-                  >
-                    <FiLogOut size={18} />
-                    <span className="hidden sm:inline">Đăng xuất</span>
-                  </button>
-                </>
-              ) : (
-                <>
-                  <Link to="/login" className={`${actionChip} ${chipPadding}`}>
-                    <FiUser size={18} />
-                    <span>Đăng nhập</span>
-                  </Link>
-                  <Link
-                    to="/register"
-                    className={`${actionChip} ${chipPadding} bg-gradient-to-r from-brand-primary to-brand-dark text-white hover:from-brand-dark hover:to-brand-primary`}
-                  >
-                    Đăng ký
-                  </Link>
-                </>
+                  ) : (
+                    <p className="py-4 text-center text-xs text-slate-400">
+                      Chưa có sản phẩm yêu thích nào.
+                    </p>
+                  )}
+                </div>
               )}
+            </div>
+
+            {/* Cart Button */}
+            <Link
+              to="/cart"
+              className="relative flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full bg-white/5 border border-white/10 text-slate-300 hover:text-white hover:bg-white/10 transition"
+              aria-label="Giỏ hàng"
+            >
+              <FiShoppingBag size={16} />
+              {cartCount > 0 && (
+                <span className="absolute -top-1 -right-1 flex h-4 min-w-[16px] px-1 items-center justify-center rounded-full bg-blue-600 text-[9px] font-bold text-white shadow">
+                  {cartCount}
+                </span>
+              )}
+            </Link>
+
+            {/* User Account Menu */}
+            <div className="relative" ref={userMenuRef}>
+              <button
+                type="button"
+                onClick={() => setShowUserMenu((prev) => !prev)}
+                className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full bg-white/5 border border-white/10 text-slate-300 hover:text-white hover:bg-white/10 transition"
+                aria-label="Tài khoản"
+              >
+                <FiUser size={16} />
+              </button>
+
+              {showUserMenu && (
+                <div className="absolute right-0 top-full mt-2 z-50 w-56 rounded-2xl border border-white/10 bg-slate-950/95 p-3 text-slate-200 shadow-2xl backdrop-blur-xl animate-fade-in-up">
+                  {isAuthenticated ? (
+                    <>
+                      <div className="px-3 py-2 border-b border-white/10 mb-2">
+                        <p className="text-xs font-bold text-white truncate">{user?.name || user?.username}</p>
+                        <p className="text-[10px] text-slate-400 truncate">{user?.email}</p>
+                        {tierLabel && (
+                          <span className="inline-block mt-1 rounded bg-blue-500/20 px-2 py-0.5 text-[9px] font-semibold text-blue-300">
+                            Hạng {tierLabel}
+                          </span>
+                        )}
+                      </div>
+                      <Link
+                        to="/profile"
+                        className="block px-3 py-2 text-xs text-slate-300 hover:bg-white/10 rounded-xl transition"
+                      >
+                        Hồ sơ cá nhân
+                      </Link>
+                      <Link
+                        to="/orders"
+                        className="block px-3 py-2 text-xs text-slate-300 hover:bg-white/10 rounded-xl transition"
+                      >
+                        Đơn hàng của tôi
+                      </Link>
+                      <Link
+                        to="/warranty"
+                        className="block px-3 py-2 text-xs text-slate-300 hover:bg-white/10 rounded-xl transition"
+                      >
+                        Tra cứu bảo hành
+                      </Link>
+                      {isAdmin && (
+                        <Link
+                          to="/admin"
+                          className="block px-3 py-2 text-xs font-bold text-blue-400 hover:bg-blue-600/20 rounded-xl transition mt-1"
+                        >
+                          Trang quản trị (Admin)
+                        </Link>
+                      )}
+                      <button
+                        type="button"
+                        onClick={logout}
+                        className="w-full text-left px-3 py-2 text-xs text-rose-400 hover:bg-rose-500/10 rounded-xl transition mt-1 border-t border-white/10"
+                      >
+                        Đăng xuất
+                      </button>
+                    </>
+                  ) : (
+                    <div className="p-2 space-y-2">
+                      <p className="text-xs text-slate-400 text-center">Đăng nhập tài khoản</p>
+                      <Link
+                        to="/login"
+                        className="block w-full text-center rounded-xl bg-blue-600 py-2 text-xs font-bold text-white hover:bg-blue-500 transition shadow"
+                      >
+                        Đăng nhập
+                      </Link>
+                      <Link
+                        to="/register"
+                        className="block w-full text-center rounded-xl border border-white/10 py-2 text-xs font-medium text-slate-300 hover:bg-white/5 transition"
+                      >
+                        Tạo tài khoản
+                      </Link>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Mobile Menu Toggle Button */}
+            <button
+              type="button"
+              onClick={() => setIsMobileMenuOpen((prev) => !prev)}
+              className="lg:hidden flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full bg-white/5 border border-white/10 text-slate-300 hover:text-white"
+              aria-label="Menu"
+            >
+              {isMobileMenuOpen ? <FiX size={18} /> : <FiMenu size={18} />}
+            </button>
+          </div>
+        </div>
+
+        {/* Mobile Search Row (visible on small screens) */}
+        <div className="px-4 pt-2.5 pb-1 md:hidden">
+          <form
+            onSubmit={handleSearchSubmit}
+            className="flex w-full items-center gap-2 rounded-full bg-white/5 border border-white/10 px-3.5 py-1.5 text-sm text-white"
+          >
+            <FiSearch className="text-slate-400 shrink-0" size={14} />
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Tìm iPhone, iPad, Mac..."
+              className="w-full bg-transparent border-none outline-none text-xs text-white placeholder:text-slate-400"
+            />
+          </form>
+        </div>
+      </div>
+
+      {/* APPLE MEGA MENU DROPDOWN (DESKTOP) */}
+      {activeMegaCategory && (
+        <div
+          className="hidden lg:block border-b border-white/10 bg-slate-950/95 shadow-2xl backdrop-blur-2xl transition-all duration-300 animate-fade-in-up"
+          onMouseEnter={() => {
+            if (megaMenuTimeoutRef.current) clearTimeout(megaMenuTimeoutRef.current);
+          }}
+          onMouseLeave={handleMouseLeaveNav}
+        >
+          <div className="max-w-7xl mx-auto px-6 py-8">
+            <div className="flex items-center justify-between border-b border-white/10 pb-4 mb-6">
+              <div className="flex items-center gap-3">
+                <span className="text-lg font-extrabold tracking-tight text-white">
+                  Danh Mục {activeMegaCategory.name}
+                </span>
+              </div>
+              <Link
+                to={activeMegaCategory.to}
+                className="group flex items-center gap-1.5 text-xs font-bold text-blue-400 hover:text-blue-300 transition"
+              >
+                <span>Xem tất cả {activeMegaCategory.name}</span>
+                <FiArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+              </Link>
+            </div>
+
+            {/* Subcategories Grid */}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+              {activeMegaCategory.subCategories.map((sub) => (
+                <Link
+                  key={sub.name}
+                  to={sub.to}
+                  className="group flex flex-col p-4 rounded-2xl border border-white/5 bg-white/[0.03] hover:bg-white/[0.08] hover:border-white/20 transition-all duration-200"
+                >
+                  <p className="text-sm font-bold text-white group-hover:text-blue-400 transition">
+                    {sub.name}
+                  </p>
+                  <p className="mt-1.5 text-xs text-slate-400 line-clamp-2 leading-relaxed">
+                    {sub.desc}
+                  </p>
+                  <span className="mt-4 text-[11px] font-semibold text-slate-500 group-hover:text-slate-300 flex items-center gap-1">
+                    Khám phá <span aria-hidden>→</span>
+                  </span>
+                </Link>
+              ))}
             </div>
           </div>
         </div>
-      </div>
+      )}
+
+      {/* Mobile Drawer Menu */}
+      {isMobileMenuOpen && (
+        <div className="lg:hidden border-b border-white/10 bg-slate-950/98 px-5 py-4 text-slate-200 shadow-2xl backdrop-blur-xl animate-fade-in-up">
+          <div className="space-y-1">
+            <NavLink
+              to="/"
+              end
+              onClick={() => setIsMobileMenuOpen(false)}
+              className={({ isActive }) =>
+                `block px-3 py-2 rounded-xl text-xs font-medium transition ${
+                  isActive ? "bg-white/15 text-white font-bold" : "text-slate-300 hover:bg-white/5"
+                }`
+              }
+            >
+              Trang chủ
+            </NavLink>
+
+            {navCatalog.map((cat) => {
+              const isExpanded = mobileExpandedCat === cat.name;
+              return (
+                <div key={cat.name} className="rounded-xl border border-white/5 bg-white/[0.02] overflow-hidden">
+                  <div className="flex items-center justify-between px-3 py-2">
+                    <Link
+                      to={cat.to}
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className="text-xs font-bold text-white hover:text-blue-400 transition"
+                    >
+                      {cat.name}
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => setMobileExpandedCat(isExpanded ? null : cat.name)}
+                      className="p-1 text-slate-400 hover:text-white"
+                      aria-label={`Mở danh mục con của ${cat.name}`}
+                    >
+                      <FiChevronDown
+                        size={14}
+                        className={`transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`}
+                      />
+                    </button>
+                  </div>
+
+                  {isExpanded && (
+                    <div className="border-t border-white/5 bg-black/30 p-2 space-y-1 animate-fade-in-up">
+                      <Link
+                        to={cat.to}
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className="block px-3 py-1.5 text-xs font-semibold text-blue-400 hover:underline"
+                      >
+                        • Xem tất cả {cat.name} →
+                      </Link>
+                      {cat.subCategories.map((sub) => (
+                        <Link
+                          key={sub.name}
+                          to={sub.to}
+                          onClick={() => setIsMobileMenuOpen(false)}
+                          className="block px-3 py-1.5 text-xs text-slate-300 hover:text-white hover:bg-white/5 rounded-lg transition"
+                        >
+                          {sub.name}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+
+            <NavLink
+              to="/warranty"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="block px-3 py-2 rounded-xl text-xs font-medium text-slate-300 hover:bg-white/5"
+            >
+              Chính sách bảo hành
+            </NavLink>
+
+            <NavLink
+              to="/about"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="block px-3 py-2 rounded-xl text-xs font-medium text-slate-300 hover:bg-white/5"
+            >
+              Giới thiệu Ngọc Triết Store
+            </NavLink>
+          </div>
+
+          {!isAuthenticated && (
+            <div className="grid grid-cols-2 gap-2 mt-4 pt-4 border-t border-white/10">
+              <Link
+                to="/login"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="flex items-center justify-center rounded-full border border-white/20 py-2 text-xs font-medium text-slate-200 hover:bg-white/10"
+              >
+                Đăng nhập
+              </Link>
+              <Link
+                to="/register"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="flex items-center justify-center rounded-full bg-white text-slate-950 py-2 text-xs font-bold hover:bg-slate-200"
+              >
+                Đăng ký
+              </Link>
+            </div>
+          )}
+        </div>
+      )}
     </header>
   );
-};
-
-export default Header;
+}

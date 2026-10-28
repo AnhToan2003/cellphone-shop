@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
@@ -58,27 +58,20 @@ const buildAddressEntry = (data) => ({
   paymentMethod: data.paymentMethod || "cod",
 });
 
-const normalizeMoney = (value) => {
-  const numeric = Number(value);
-  if (!Number.isFinite(numeric) || numeric < 0) {
-    return 0;
-  }
-  return Math.round(numeric);
-};
-
 const Checkout = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { items, totalAmount } = useSelector((state) => state.cart);
   const { status } = useSelector((state) => state.orders);
 
-  const shippingFee = SHIPPING_FEE;
-
   const [form, setForm] = useState(() => getDefaultFormState());
   const [savedAddresses, setSavedAddresses] = useState(() => loadSavedAddresses());
   const [selectedAddressId, setSelectedAddressId] = useState("");
   const [editingAddressId, setEditingAddressId] = useState("");
   const [editValues, setEditValues] = useState(() => getDefaultFormState());
+
+  const isStore = form.paymentMethod === "store";
+  const shippingFee = isStore ? 0 : SHIPPING_FEE;
 
   const selectedAddress = useMemo(
     () => savedAddresses.find((address) => address.id === selectedAddressId) || null,
@@ -188,47 +181,22 @@ const Checkout = () => {
     setEditValues(getDefaultFormState());
   };
 
-  const startVietqrFlow = ({ reference, transferContent, totals, orderId }) => {
-    const normalizedReference =
-      typeof reference === "string" && reference.trim() ? reference.trim() : "";
-    const normalizedTransfer =
-      typeof transferContent === "string" && transferContent.trim()
-        ? transferContent.trim()
-        : normalizedReference
-        ? `Thanh toán đơn hàng ${normalizedReference}`
-        : `Thanh toán đơn hàng ${Date.now()}`;
-    const itemsAmount = normalizeMoney(totals?.items);
-    const shippingAmountCandidate = normalizeMoney(totals?.shipping);
-    const shippingAmount =
-      shippingAmountCandidate > 0 ? shippingAmountCandidate : SHIPPING_FEE;
-    const grandCandidate = Number(totals?.grand);
-    const normalizedGrand =
-      Number.isFinite(grandCandidate) && grandCandidate > 0
-        ? Math.max(0, Math.round(grandCandidate))
-        : itemsAmount + shippingAmount;
-    const totalToPay =
-      normalizedGrand > 0 ? normalizedGrand : itemsAmount + shippingAmount;
-    const returnUrl = orderId
-      ? `${window.location.origin}/payment-return?orderId=${encodeURIComponent(orderId)}`
-      : `${window.location.origin}/`;
-
-    try {
-      const payUrl = new URL("http://localhost:5500/pay");
-      payUrl.searchParams.set("total", String(totalToPay));
-      payUrl.searchParams.set("items", String(itemsAmount));
-      payUrl.searchParams.set("shipping", String(shippingAmount));
-      payUrl.searchParams.set("addInfo", normalizedTransfer);
-      payUrl.searchParams.set("returnUrl", returnUrl);
-
-      window.location.href = payUrl.toString();
-    } catch (error) {
-      toast.error("Không thể mở trang thanh toán VietQR.");
-    }
-  };
-
   const handleSubmit = async (event) => {
     event.preventDefault();
-    if (!items.length) return;
+    if (!items.length) {
+      toast.error("Giỏ hàng của bạn đang trống.");
+      return;
+    }
+
+    if (!form.fullName.trim() || !form.phone.trim()) {
+      toast.error("Vui lòng nhập đầy đủ họ tên và số điện thoại nhận hàng.");
+      return;
+    }
+
+    if (!isStore && !form.address.trim()) {
+      toast.error("Vui lòng nhập địa chỉ nhận hàng khi chọn giao hàng tận nơi (COD).");
+      return;
+    }
 
     const payload = {
       items: items.map((item) => ({
@@ -238,11 +206,13 @@ const Checkout = () => {
         capacity: item.capacity || undefined,
       })),
       shippingInfo: {
-        fullName: form.fullName,
-        phone: form.phone,
-        address: form.address,
+        fullName: form.fullName.trim(),
+        phone: form.phone.trim(),
+        address: isStore
+          ? "Nhận tại showroom Ngọc Triết Store (Hotline: 039 555 4268)"
+          : form.address.trim(),
       },
-      paymentMethod: form.paymentMethod,
+      paymentMethod: form.paymentMethod || "cod",
       summary: {
         items: totalAmount,
         shipping: shippingFee,
@@ -252,40 +222,13 @@ const Checkout = () => {
 
     const result = await dispatch(createOrder(payload));
     if (createOrder.fulfilled.match(result)) {
-      const createdOrder = result.payload?.data;
-      const itemsTotal = normalizeMoney(
-        createdOrder?.totals?.items ?? totalAmount ?? 0
+      toast.success(
+        isStore
+          ? "Đặt giữ máy thành công! Ngọc Triết Store sẽ liên hệ xác nhận sớm nhất."
+          : "Đặt hàng thành công! Đơn hàng sẽ được đóng gói và giao nhanh."
       );
-      const shippingTotalCandidate = normalizeMoney(
-        createdOrder?.totals?.shipping
-      );
-      const shippingTotal =
-        shippingTotalCandidate > 0 ? shippingTotalCandidate : SHIPPING_FEE;
-      const grandTotalCandidate = Number(createdOrder?.totals?.grand);
-      const grandTotal =
-        Number.isFinite(grandTotalCandidate) && grandTotalCandidate > 0
-          ? Math.max(0, Math.round(grandTotalCandidate))
-          : itemsTotal + shippingTotal;
-      const vietqrTotals = {
-        items: itemsTotal,
-        shipping: shippingTotal,
-        grand: grandTotal,
-      };
-
-      if (form.paymentMethod === "vietqr") {
-        startVietqrFlow({
-          reference: createdOrder?.payment?.reference,
-          transferContent: createdOrder?.payment?.transferContent,
-          totals: vietqrTotals,
-          orderId: createdOrder?._id,
-        });
-        dispatch(clearCart());
-        return;
-      }
-
-      toast.success("Đặt hàng thành công");
       dispatch(clearCart());
-      navigate("/", { replace: true });
+      navigate("/orders", { replace: true });
     } else if (result.payload) {
       toast.error(result.payload);
     } else {
@@ -448,23 +391,44 @@ const Checkout = () => {
                       placeholder="0987 654 321"
                     />
                   </div>
-                  <div className="md:col-span-2">
-                    <label
-                      htmlFor="address"
-                      className="block text-sm font-medium text-slate-600"
-                    >
-                      Địa chỉ giao hàng
-                    </label>
-                    <input
-                      id="address"
-                      name="address"
-                      value={form.address}
-                      onChange={handleChange}
-                      required
-                      className="mt-2 w-full rounded-lg border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
-                      placeholder="123 Nguyễn Trãi, Quận 1, TP. HCM"
-                    />
-                  </div>
+                  {isStore ? (
+                    <div className="md:col-span-2 rounded-2xl border border-blue-500/30 bg-blue-50/70 p-4 shadow-sm animate-fade-in-up">
+                      <div className="flex items-start gap-3">
+                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white text-lg shadow-sm">
+                          🏪
+                        </span>
+                        <div className="space-y-1">
+                          <h4 className="text-sm font-bold text-slate-900">
+                            Nhận máy trực tiếp tại Showroom Ngọc Triết Store
+                          </h4>
+                          <p className="text-xs text-slate-600 leading-relaxed">
+                            Quý khách không cần nhập địa chỉ giao hàng. Nhân viên Ngọc Triết Store sẽ liên hệ qua số điện thoại để chuẩn bị máy sẵn sàng, hỗ trợ test máy, dán cường lực &amp; chuyển dữ liệu miễn phí.
+                          </p>
+                          <p className="text-xs font-semibold text-blue-700 pt-1">
+                            📞 Hotline tư vấn &amp; đặt lịch nhận máy: 039 555 4268
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="md:col-span-2">
+                      <label
+                        htmlFor="address"
+                        className="block text-sm font-medium text-slate-600"
+                      >
+                        Địa chỉ nhận hàng tận nơi <span className="text-rose-500">*</span>
+                      </label>
+                      <input
+                        id="address"
+                        name="address"
+                        value={form.address}
+                        onChange={handleChange}
+                        required
+                        className="mt-2 w-full rounded-lg border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
+                        placeholder="Số nhà, tên đường, phường/xã, quận/huyện, tỉnh/thành phố..."
+                      />
+                    </div>
+                  )}
                 </div>
                 <div className="mt-4 flex justify-end">
                   <button
@@ -477,65 +441,91 @@ const Checkout = () => {
                 </div>
               </div>
 
-              <div className="rounded-2xl bg-white p-6 shadow">
-                <h2 className="text-xl font-semibold text-slate-900">
-                  Phương thức thanh toán
+              <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                <h2 className="text-xl font-bold text-slate-900">
+                  Phương thức nhận hàng & thanh toán
                 </h2>
                 <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                  <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-600 transition hover:border-brand-primary">
+                  <label className={`flex cursor-pointer items-start gap-3 rounded-xl border-2 p-4 transition ${
+                    form.paymentMethod === "cod"
+                      ? "border-blue-600 bg-blue-50/60 shadow-sm"
+                      : "border-slate-200 bg-slate-50/40 hover:border-slate-300"
+                  }`}>
                     <input
                       type="radio"
                       name="paymentMethod"
                       value="cod"
                       checked={form.paymentMethod === "cod"}
                       onChange={handleChange}
-                      className="h-4 w-4 accent-brand-primary"
+                      className="mt-1 h-4 w-4 accent-blue-600"
                     />
-                    Thanh toán khi nhận hàng (COD)
+                    <div>
+                      <span className="block text-sm font-bold text-slate-900">
+                        Giao hàng tận nơi (Ship COD)
+                      </span>
+                      <span className="mt-0.5 block text-xs text-slate-500">
+                        Kiểm tra máy và phụ kiện trước khi thanh toán. Cần nhập địa chỉ.
+                      </span>
+                    </div>
                   </label>
-                  <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-600 transition hover:border-brand-primary">
+
+                  <label className={`flex cursor-pointer items-start gap-3 rounded-xl border-2 p-4 transition ${
+                    form.paymentMethod === "store"
+                      ? "border-blue-600 bg-blue-50/60 shadow-sm"
+                      : "border-slate-200 bg-slate-50/40 hover:border-slate-300"
+                  }`}>
                     <input
                       type="radio"
                       name="paymentMethod"
-                      value="vietqr"
-                      checked={form.paymentMethod === "vietqr"}
+                      value="store"
+                      checked={form.paymentMethod === "store"}
                       onChange={handleChange}
-                      className="h-4 w-4 accent-brand-primary"
+                      className="mt-1 h-4 w-4 accent-blue-600"
                     />
-                    Thanh toán qua VietQR
+                    <div>
+                      <span className="block text-sm font-bold text-slate-900">
+                        Nhận máy tại Ngọc Triết Store
+                      </span>
+                      <span className="mt-0.5 block text-xs text-slate-500">
+                        Không cần địa chỉ. Đến showroom trải nghiệm và nhận quà.
+                      </span>
+                    </div>
                   </label>
                 </div>
-                <p className="mt-2 text-xs text-slate-500">
-                  Chọn VietQR để nhận mã QR và chuyển khoản trực tuyến. Đơn hàng sẽ được cập nhật ngay khi xác nhận giao dịch.
-                </p>
+                <div className="mt-4 flex items-center gap-2 rounded-xl bg-slate-100 px-3 py-2 text-xs text-slate-600">
+                  <span className="font-semibold text-slate-900">Cam kết:</span>
+                  <span>Kiểm tra máy kỹ lưỡng trước khi nhận hàng. Hỗ trợ kỹ thuật chu đáo.</span>
+                </div>
               </div>
             </section>
 
             <aside className="space-y-6">
-              <div className="rounded-2xl bg-white p-6 shadow">
-                <h2 className="text-xl font-semibold text-slate-900">
+              <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                <h2 className="text-xl font-bold text-slate-900">
                   Tóm tắt đơn hàng
                 </h2>
                 <div className="mt-4 space-y-3 text-sm text-slate-600">
                   <div className="flex items-center justify-between">
                     <span>Sản phẩm ({items.length})</span>
-                    <span>{currency(totalAmount)}</span>
+                    <span className="font-semibold text-slate-900">{currency(totalAmount)}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span>Phí vận chuyển</span>
-                    <span>{currency(shippingFee)}</span>
+                    <span className={`font-semibold ${isStore ? "text-emerald-600" : "text-slate-900"}`}>
+                      {isStore ? "Miễn phí" : currency(shippingFee)}
+                    </span>
                   </div>
-                  <div className="flex items-center justify-between text-base font-semibold text-slate-900">
+                  <div className="border-t border-slate-100 pt-3 flex items-center justify-between text-base font-bold text-slate-900">
                     <span>Tổng thanh toán</span>
-                    <span>{currency(totalAmount + shippingFee)}</span>
+                    <span className="text-lg text-blue-600">{currency(totalAmount + shippingFee)}</span>
                   </div>
                 </div>
                 <button
                   type="submit"
                   disabled={status === "loading"}
-                  className="mt-6 w-full rounded-full bg-brand-primary px-6 py-3 text-sm font-semibold text-white transition hover:bg-brand-dark disabled:cursor-not-allowed disabled:bg-brand-dark/50"
+                  className="mt-6 w-full rounded-xl bg-slate-900 px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-slate-900/20 transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
                 >
-                  {status === "loading" ? "Đang xử lý..." : "Đặt hàng"}
+                  {status === "loading" ? "Đang xử lý..." : "Xác nhận đặt hàng"}
                 </button>
               </div>
             </aside>

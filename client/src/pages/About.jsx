@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 
 const FACTS = [
   { label: "Trung tâm giao nhận", value: "24+", hint: "Phủ sóng toàn quốc, giao nhanh 2H" },
@@ -78,7 +78,7 @@ const FAQ_ITEMS = [
     id: "support",
     question: "Cần hỗ trợ nhanh tôi liên hệ ở đâu?",
     answer:
-      "Gõ ngay tại hộp chat trợ lý, gọi hotline 0794 460 285, hoặc ghé cửa hàng gần nhất. Chúng tôi trực 08:00 - 21:00 mỗi ngày.",
+      "Quý khách có thể bấm biểu tượng liên hệ nhanh ở góc màn hình hoặc nhắn tin qua Zalo để được chuyên viên Ngọc Triết Store tư vấn báo giá ngay.",
   },
 ];
 
@@ -105,39 +105,41 @@ const AboutPage = ({ initialSection = "about" }) => {
 
   return (
     <div className="bg-gradient-to-b from-white via-white to-slate-50">
-      <section className="relative overflow-hidden bg-gradient-to-r from-brand-primary via-brand-light to-aurora text-white">
+      <section className="relative overflow-hidden bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 text-white">
         <span className="pointer-events-none absolute inset-0 bg-hero-glow opacity-80" aria-hidden />
         <div className="container-safe relative z-10 grid gap-10 py-16 lg:grid-cols-[1.2fr_0.9fr] lg:items-center">
           <div className="space-y-5">
-            <p className="pill-badge bg-white/15 text-white">Về Cellphone Shop</p>
+            <p className="pill-badge bg-white/15 text-white">Về Ngọc Triết Store</p>
             <h1 className="text-3xl font-bold leading-tight sm:text-4xl">
-              Mang công nghệ mới nhất đến gần bạn hơn, cùng dịch vụ tận tâm 24/7.
+              Chuyên Mua Bán – Sửa Chữa Điện Thoại, Uy Tín Hàng Đầu.
             </h1>
             <p className="text-base text-white/80">
-              Chúng tôi tin rằng thiết bị di động không chỉ là công cụ, mà là nhịp sống. Từ flagship tới
-              thiết bị phổ thông, mọi sản phẩm đều được chọn lọc, kèm gói bảo vệ và hỗ trợ sau bán rõ ràng.
+              Ngọc Triết Store cam kết mang đến những thiết bị di động chính hãng chất lượng nhất, đi kèm dịch vụ sửa chữa chuyên nghiệp, minh bạch và chế độ hậu mãi chu đáo.
             </p>
             <div className="flex flex-wrap gap-3">
               <span className="rounded-full border border-white/30 bg-white/10 px-4 py-2 text-sm font-semibold">
-                Trợ lý AI 24/7
+                Tư vấn 24/7
               </span>
               <span className="rounded-full border border-white/30 bg-white/10 px-4 py-2 text-sm font-semibold">
-                Giao nhanh 2H
+                Giao hàng toàn quốc
               </span>
               <span className="rounded-full border border-white/30 bg-white/10 px-4 py-2 text-sm font-semibold">
-                Đổi mới 30 ngày
+                Bảo hành 1 đổi 1
               </span>
             </div>
             <div className="flex flex-wrap gap-3">
+              <Link
+                to="/products"
+                className="rounded-full bg-white px-5 py-3 text-sm font-semibold text-slate-900 shadow-lg shadow-white/20 transition hover:-translate-y-0.5"
+              >
+                Khám phá sản phẩm Apple
+              </Link>
               <a
                 href="#faq-section"
-                className="rounded-full bg-white px-5 py-3 text-sm font-semibold text-brand-primary shadow-lg shadow-white/30 transition hover:-translate-y-0.5"
+                className="rounded-full border border-white/30 px-5 py-3 text-sm font-semibold text-white/90 hover:bg-white/10 transition"
               >
                 Xem câu hỏi thường gặp
               </a>
-              <span className="rounded-full border border-white/30 px-5 py-3 text-sm font-semibold text-white/90">
-                Hotline: 0794 460 285
-              </span>
             </div>
           </div>
 

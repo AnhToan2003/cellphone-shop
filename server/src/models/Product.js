@@ -13,7 +13,7 @@ const normalizeForSearch = (value = "") =>
 const productSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true },
-    slug: { type: String, unique: true, index: true },
+    slug: { type: String, unique: true },
     brand: { type: String, required: true, trim: true },
     price: { type: Number, required: true },
     oldPrice: { type: Number, default: null },
@@ -32,7 +32,14 @@ const productSchema = new mongoose.Schema(
       min: 1,
       max: 60,
     },
-    category: { type: String, default: "" },
+    promotionsPolicy: {
+      type: String,
+      default:
+        "Tặng củ sạc nhanh Apple 20W USB-C chính hãng trị giá 490.000₫\nTặng ốp lưng MagSafe chống sốc & Dán cường lực KingKong cao cấp\nGiảm thêm 500.000₫ khi tham gia Thu cũ đổi mới (Trade-in)\nGiảm 20% khi mua kèm phụ kiện AirPods / Apple Watch\nHỗ trợ trả góp 0% lãi suất qua CCCD hoặc thẻ tín dụng",
+      trim: true,
+    },
+    category: { type: String, default: "", trim: true },
+    subCategory: { type: String, default: "", trim: true },
     stock: { type: Number, default: 0 },
     imageUrl: { type: String, required: true },
     images: {
@@ -51,6 +58,7 @@ const productSchema = new mongoose.Schema(
     options: {
       colors: { type: [String], default: [] },
       capacities: { type: [String], default: [] },
+      colorImages: { type: Map, of: [String], default: {} },
     },
     variants: {
       type: [

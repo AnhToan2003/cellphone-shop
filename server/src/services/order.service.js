@@ -16,10 +16,49 @@ export const restockOrderInventory = async (order) => {
 
       if (!productId) return;
 
-      await Product.findByIdAndUpdate(
-        productId,
-        { $inc: { stock: item.quantity } },
-        { new: false }
+      const color = item.color || "";
+      const capacity = item.capacity || "";
+      const variantId = item.variantId || null;
+      if (variantId || color || capacity) {
+        const variantRestock = await Product.updateOne(
+          {
+            _id: productId,
+            variants: {
+              $elemMatch: {
+                ...(variantId
+                  ? { _id: variantId }
+                  : { color, capacity }),
+                stock: { $ne: null },
+              },
+            },
+          },
+          {
+            $inc: {
+              stock: item.quantity,
+              "variants.$[variant].stock": item.quantity,
+            },
+          },
+          {
+            arrayFilters: [
+              {
+                ...(variantId
+                  ? { "variant._id": variantId }
+                  : {
+                      "variant.color": color,
+                      "variant.capacity": capacity,
+                    }),
+                "variant.stock": { $ne: null },
+              },
+            ],
+          }
+        );
+
+        if (variantRestock.matchedCount > 0) return;
+      }
+
+      await Product.updateOne(
+        { _id: productId },
+        { $inc: { stock: item.quantity } }
       );
     })
   );

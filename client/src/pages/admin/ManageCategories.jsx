@@ -668,7 +668,7 @@ const ManageCategories = () => {
 
         <div className="rounded-3xl border border-slate-800 bg-slate-950/30 p-6">
           <h2 className="text-lg font-semibold text-white">Danh sách hiện có</h2>
-﻿          {loading ? (
+          {loading ? (
             <p className="mt-4 text-sm text-slate-500">Đang tải...</p>
           ) : sortedRecords.length ? (
             <div className="mt-4 space-y-4">

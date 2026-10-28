@@ -39,7 +39,6 @@ brandSchema.pre("validate", function handleSlug(next) {
 });
 
 brandSchema.index({ order: 1, name: 1 });
-brandSchema.index({ slug: 1 }, { unique: true });
 
 export const Brand =
   mongoose.models.Brand || mongoose.model("Brand", brandSchema);

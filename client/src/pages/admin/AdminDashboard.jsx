@@ -23,8 +23,8 @@ import {
 import { getAssetUrl } from "../../utils/assets.js";
 
 const METHOD_LABELS = {
-  vietqr: "Chuyển khoản VietQR",
   cod: "Thanh toán khi nhận hàng (COD)",
+  other: "Nhận tại cửa hàng / đơn cũ",
 };
 
 const formatCurrency = (value = 0) =>
@@ -48,7 +48,7 @@ const AdminDashboard = () => {
     totalProfit: 0,
     paymentBreakdown: {
       cod: { revenue: 0, orders: 0, profit: 0 },
-      vietqr: { revenue: 0, orders: 0, profit: 0 },
+      other: { revenue: 0, orders: 0, profit: 0 },
     },
     revenueTimeline: [],
     timelineRange: null,
@@ -99,9 +99,9 @@ const AdminDashboard = () => {
     const series = stats.revenueTimeline ?? [];
     return series.map((entry) => {
       const cod = entry.cod || {};
-      const vietqr = entry.vietqr || {};
-      const totalRevenue = (cod.revenue ?? 0) + (vietqr.revenue ?? 0);
-      const totalProfit = (cod.profit ?? 0) + (vietqr.profit ?? 0);
+      const other = entry.other || {};
+      const totalRevenue = (cod.revenue ?? 0) + (other.revenue ?? 0);
+      const totalProfit = (cod.profit ?? 0) + (other.profit ?? 0);
 
       return {
         date: new Date(entry.date).toLocaleDateString("vi-VN", {
@@ -109,7 +109,7 @@ const AdminDashboard = () => {
           month: "2-digit",
         }),
         codRevenue: cod.revenue ?? 0,
-        vietqrRevenue: vietqr.revenue ?? 0,
+        otherRevenue: other.revenue ?? 0,
         totalRevenue,
         totalProfit,
       };
@@ -121,7 +121,7 @@ const AdminDashboard = () => {
       timelineData.map((point) => ({
         date: point.date,
         cod: point.codRevenue ?? 0,
-        vietqr: point.vietqrRevenue ?? 0,
+        other: point.otherRevenue ?? 0,
       })),
     [timelineData]
   );
@@ -244,7 +244,7 @@ const AdminDashboard = () => {
             Doanh thu & lợi nhuận theo thời gian
           </h2>
           <p className="text-sm text-slate-400">
-            Các cột hiển thị doanh thu COD và VietQR theo ngày; đường biểu diễn thể hiện lợi nhuận.
+            Các cột hiển thị doanh thu COD và các đơn nhận tại cửa hàng hoặc đơn cũ; đường biểu diễn thể hiện lợi nhuận.
           </p>
 
           <div className="mt-6 h-[420px]">
@@ -290,8 +290,8 @@ const AdminDashboard = () => {
                   />
                   <Bar
                     yAxisId="left"
-                    dataKey="vietqrRevenue"
-                    name="Doanh thu VietQR"
+                    dataKey="otherRevenue"
+                    name="Nhận tại cửa hàng / đơn cũ"
                     fill="#22c55e"
                     radius={[8, 8, 0, 0]}
                   />
@@ -471,7 +471,7 @@ const AdminDashboard = () => {
           Phân rã doanh thu theo ngày
         </h2>
         <p className="text-sm text-slate-400">
-          Biểu đồ cột thể hiện doanh thu COD và VietQR theo từng ngày.
+          Biểu đồ cột thể hiện doanh thu COD và các đơn nhận tại cửa hàng hoặc đơn cũ theo từng ngày.
         </p>
 
         <div className="mt-6 h-80">
@@ -506,8 +506,8 @@ const AdminDashboard = () => {
                   radius={[6, 6, 0, 0]}
                 />
                 <Bar
-                  dataKey="vietqr"
-                  name="VietQR"
+                  dataKey="other"
+                  name="Cửa hàng / đơn cũ"
                   stackId="revenue"
                   fill="#22c55e"
                   radius={[6, 6, 0, 0]}

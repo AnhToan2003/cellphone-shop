@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { Product } from "../models/Product.js";
 import { Review } from "../models/Review.js";
+import { saveUploadedImage } from "../middleware/upload.js";
 import { Order } from "../models/Order.js";
 import { buildPagination, preparePagination } from "../utils/paginate.js";
 import {
@@ -19,17 +20,30 @@ const normalizeForSearch = (value = "") =>
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase();
 
+const variantSchema = z.object({
+  color: z.string().optional().default(""),
+  capacity: z.string().optional().default(""),
+  price: z.number().nonnegative("Variant price must be non-negative"),
+  stock: z.number().int().min(0).nullable().optional(),
+  images: z.array(z.string()).default([]),
+});
+
 const productInputSchema = z.object({
   name: z.string().min(2, "Product name must contain at least 2 characters"),
   brand: z.string().min(2, "Brand must contain at least 2 characters"),
   category: z.string().optional().default(""),
+  subCategory: z.string().optional().default(""),
   price: z.number().nonnegative("Price must be greater than or equal to 0"),
+  oldPrice: z.number().nullable().optional(),
   discountPercent: z.number().min(0).max(100).default(0),
   stock: z.number().int().min(0).default(0),
   description: z.string().optional().default(""),
+  warrantyPolicy: z.string().optional(),
+  warrantyMonths: z.number().int().min(1).max(60).optional(),
+  promotionsPolicy: z.string().optional(),
   imageUrl: z.string().optional().default(""),
   images: z.array(z.string()).default([]),
-  specs: z.record(z.string().min(1), z.string().min(1)).default({}),
+  specs: z.record(z.string().min(1), z.string()).default({}),
   rating: z.number().min(0).max(5).default(4.5),
   ratingCount: z.number().int().min(0).default(0),
   featured: z.boolean().default(false),
@@ -37,8 +51,10 @@ const productInputSchema = z.object({
     .object({
       colors: z.array(z.string()).default([]),
       capacities: z.array(z.string()).default([]),
+      colorImages: z.record(z.string(), z.array(z.string())).optional().default({}),
     })
-    .default({ colors: [], capacities: [] }),
+    .default({ colors: [], capacities: [], colorImages: {} }),
+  variants: z.array(variantSchema).optional().default([]),
 });
 
 const updateSchema = productInputSchema.partial();
@@ -59,8 +75,11 @@ export const listProducts = asyncHandler(async (req, res) => {
   const {
     search = "",
     brand,
+    category,
+    subCategory,
     min,
     max,
+    sort,
     page = "1",
     limit = "12",
   } = req.query;
@@ -105,6 +124,38 @@ export const listProducts = asyncHandler(async (req, res) => {
     }
   }
 
+  if (category) {
+    const categories = String(category)
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+    if (categories.length) {
+      conditions.push({
+        category: {
+          $in: categories.map(
+            (value) => new RegExp(`^${escapeRegExp(value)}$`, "i")
+          ),
+        },
+      });
+    }
+  }
+
+  if (subCategory) {
+    const subCategories = String(subCategory)
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+    if (subCategories.length) {
+      conditions.push({
+        subCategory: {
+          $in: subCategories.map(
+            (value) => new RegExp(`^${escapeRegExp(value)}$`, "i")
+          ),
+        },
+      });
+    }
+  }
+
   if (min || max) {
     const priceFilter = {};
     if (min) {
@@ -120,6 +171,17 @@ export const listProducts = asyncHandler(async (req, res) => {
 
   const filters = conditions.length ? { $and: conditions } : {};
 
+  let sortQuery = { createdAt: -1 };
+  if (sort === "price-asc") {
+    sortQuery = { price: 1 };
+  } else if (sort === "price-desc") {
+    sortQuery = { price: -1 };
+  } else if (sort === "name") {
+    sortQuery = { name: 1 };
+  } else if (sort === "rating") {
+    sortQuery = { rating: -1 };
+  }
+
   const pagination = preparePagination({
     page: Number(page),
     limit: Number(limit),
@@ -127,9 +189,13 @@ export const listProducts = asyncHandler(async (req, res) => {
 
   const [items, total] = await Promise.all([
     Product.find(filters)
-      .sort({ createdAt: -1 })
+      .select(
+        "name slug brand price oldPrice finalPrice discountPercent stock imageUrl rating ratingCount featured category subCategory options.colors options.capacities"
+      )
+      .sort(sortQuery)
       .skip(pagination.skip)
-      .limit(pagination.limit),
+      .limit(pagination.limit)
+      .lean(),
     Product.countDocuments(filters),
   ]);
 
@@ -198,7 +264,18 @@ export const createProduct = asyncHandler(async (req, res) => {
     capacities: (payload.options?.capacities || [])
       .map((cap) => cap.trim())
       .filter(Boolean),
+    colorImages:
+      typeof payload.options?.colorImages === "object" && payload.options?.colorImages !== null
+        ? payload.options.colorImages
+        : {},
   };
+
+  const variants = (Array.isArray(payload.variants) ? payload.variants : []).map((v) => {
+    if (v?.color && (!v.images || v.images.length === 0) && options.colorImages[v.color]) {
+      return { ...v, images: options.colorImages[v.color] };
+    }
+    return v;
+  });
 
   const { options: _ignoredOptions, ...restPayload } = payload;
 
@@ -208,7 +285,9 @@ export const createProduct = asyncHandler(async (req, res) => {
     imageUrl: normalizedImageUrl,
     images: preparedImages,
     category: payload.category?.trim() || "",
+    subCategory: payload.subCategory?.trim() || "",
     options,
+    variants,
   });
 
   res.status(201).json({
@@ -252,6 +331,10 @@ export const updateProduct = asyncHandler(async (req, res) => {
   }
 
   if (payload.options) {
+    const rawColorImages =
+      payload.options.colorImages && typeof payload.options.colorImages === "object"
+        ? payload.options.colorImages
+        : {};
     payload.options = {
       colors: Array.isArray(payload.options.colors)
         ? payload.options.colors.map((color) => color.trim()).filter(Boolean)
@@ -259,6 +342,7 @@ export const updateProduct = asyncHandler(async (req, res) => {
       capacities: Array.isArray(payload.options.capacities)
         ? payload.options.capacities.map((cap) => cap.trim()).filter(Boolean)
         : [],
+      colorImages: rawColorImages,
     };
   }
 
@@ -268,6 +352,18 @@ export const updateProduct = asyncHandler(async (req, res) => {
   }
   if (payload.category !== undefined) {
     product.category = payload.category?.trim() || "";
+  }
+  if (payload.subCategory !== undefined) {
+    product.subCategory = payload.subCategory?.trim() || "";
+  }
+  if (payload.variants !== undefined) {
+    const colorImages = payload.options?.colorImages || {};
+    product.variants = (Array.isArray(payload.variants) ? payload.variants : []).map((v) => {
+      if (v?.color && (!v.images || v.images.length === 0) && colorImages[v.color]) {
+        return { ...v, images: colorImages[v.color] };
+      }
+      return v;
+    });
   }
   await product.save();
 
@@ -309,7 +405,7 @@ export const uploadProduct = asyncHandler(async (req, res) => {
     stock: Number(req.body.stock ?? 0),
   });
 
-  const imageUrl = `/uploads/products/${req.file.filename}`;
+  const imageUrl = await saveUploadedImage(req.file, "products");
 
   const product = await Product.create({
     name: parsed.name,
@@ -417,7 +513,7 @@ export const getProductReviews = asyncHandler(async (req, res) => {
 
   const reviews = await Review.find({ product: product._id })
     .sort({ createdAt: -1 })
-    .populate("user", "name email");
+    .populate("user", "name");
 
   const stats = reviews.reduce(
     (acc, review) => {

@@ -10,7 +10,6 @@ import { fetchProductBySlug } from "../store/slices/productSlice.js";
 import { getAssetUrl, getProductImage } from "../utils/assets.js";
 import { fetchProductReviews, createProductReview } from "../services/api.js";
 import { useAuth } from "../context/AuthContext.jsx";
-import { addToViewHistory } from "../utils/viewHistory.js";
 
 const currency = (value) =>
   new Intl.NumberFormat("vi-VN", {
@@ -181,12 +180,7 @@ const ProductDetail = () => {
     setSelectedColor(colors[0] || "");
     setSelectedCapacity(capacities[0] || "");
     setLastSelectedOption(null);
-
-    addToViewHistory({
-      ...product,
-      finalPrice: product.finalPrice ?? product.price ?? 0,
-    });
-  }, [product?._id]);
+  }, [product]);
 
   useEffect(() => {
     let active = true;
@@ -283,29 +277,83 @@ const ProductDetail = () => {
 
   const galleryImages = useMemo(() => {
     const seen = new Set();
-    const uniqueImages = [];
-    const pushImage = (image) => {
+    const colorSpecificImages = [];
+    const fallbackImages = [];
+
+    const pushUnique = (list, image) => {
       if (!image || typeof image !== "string") return;
       const resolved = getAssetUrl(image);
       if (!resolved || seen.has(resolved)) return;
       seen.add(resolved);
-      uniqueImages.push(resolved);
+      list.push(resolved);
     };
 
-    if (Array.isArray(activeVariant?.images)) {
-      activeVariant.images.forEach(pushImage);
+    // 1. Check colorImages dictionary from product.options
+    if (selectedColor && product?.options?.colorImages) {
+      const normalizedSel = normalizeVariantValue(selectedColor);
+      let directColorImages =
+        product.options.colorImages[selectedColor] ||
+        product.options.colorImages[normalizedSel] ||
+        null;
+
+      if (!directColorImages) {
+        // Case-insensitive key match
+        const foundKey = Object.keys(product.options.colorImages).find(
+          (k) => normalizeVariantValue(k) === normalizedSel
+        );
+        if (foundKey) {
+          directColorImages = product.options.colorImages[foundKey];
+        }
+      }
+
+      if (Array.isArray(directColorImages) && directColorImages.length > 0) {
+        directColorImages.forEach((img) => pushUnique(colorSpecificImages, img));
+      }
     }
 
+    // 2. Check activeVariant images (color + capacity match)
+    if (Array.isArray(activeVariant?.images) && activeVariant.images.length > 0) {
+      activeVariant.images.forEach((img) => pushUnique(colorSpecificImages, img));
+    }
+
+    // 3. Check any variant with matching color
+    if (selectedColor && colorSpecificImages.length === 0) {
+      const normalizedSelected = normalizeVariantValue(selectedColor);
+      variantList
+        .filter((v) => normalizeVariantValue(v?.color) === normalizedSelected)
+        .forEach((v) => {
+          if (Array.isArray(v.images) && v.images.length > 0) {
+            v.images.forEach((img) => pushUnique(colorSpecificImages, img));
+          }
+        });
+    }
+
+    // If color-specific images are found, return ONLY those images!
+    if (colorSpecificImages.length > 0) {
+      return colorSpecificImages;
+    }
+
+    // Fallback: general product gallery and main cover image
     if (Array.isArray(product?.images)) {
-      product.images.forEach(pushImage);
+      product.images.forEach((img) => pushUnique(fallbackImages, img));
     }
+    pushUnique(fallbackImages, product?.imageUrl);
 
-    pushImage(product?.imageUrl);
-    return uniqueImages;
-  }, [activeVariant?.images, product?.images, product?.imageUrl]);
+    return fallbackImages.length > 0
+      ? fallbackImages
+      : [PRODUCT_IMAGE_PLACEHOLDER];
+  }, [
+    activeVariant?.images,
+    selectedColor,
+    variantList,
+    product?.options?.colorImages,
+    product?.images,
+    product?.imageUrl,
+  ]);
 
   useEffect(() => {
     setActiveImageIndex(0);
+    setQuantity(1);
   }, [product?._id, selectedColor, selectedCapacity]);
 
   useEffect(() => {
@@ -336,6 +384,16 @@ const ProductDetail = () => {
   const handleAddToCart = () => {
     if (!product) return false;
 
+    if (availableStock < 1) {
+      toast.error("Biến thể đã chọn hiện hết hàng");
+      return false;
+    }
+
+    if (quantity > availableStock) {
+      toast.error(`Chỉ còn ${availableStock} sản phẩm cho biến thể đã chọn`);
+      return false;
+    }
+
     if (colors.length && !selectedColor) {
       toast.error("Vui lòng chọn màu sắc");
       return false;
@@ -358,6 +416,7 @@ const ProductDetail = () => {
         price: finalPrice,
         image: imageSrc,
         quantity,
+        availableStock,
         selectedColor: selectedColor || null,
         selectedCapacity: selectedCapacity || null,
       })
@@ -461,6 +520,10 @@ const ProductDetail = () => {
   const finalPrice = Number.isFinite(computedFinalPrice)
     ? computedFinalPrice
     : variantBasePrice;
+  const availableStock = Math.max(
+    0,
+    Number(activeVariant?.stock ?? product.stock ?? 0)
+  );
 
   let comparePrice = Number(product?.oldPrice ?? 0);
   if (!comparePrice && discountFactor < 1) {
@@ -501,10 +564,29 @@ const ProductDetail = () => {
         product.discountPercent ||
         0;
 
-  const warrantyPolicy =
+  const defaultPromotions = "Tặng củ sạc nhanh Apple 20W USB-C chính hãng trị giá 490.000₫\nTặng ốp lưng MagSafe chống sốc & Dán cường lực KingKong cao cấp\nGiảm thêm 500.000₫ khi tham gia Thu cũ đổi mới (Trade-in)\nGiảm 20% khi mua kèm phụ kiện AirPods / Apple Watch\nHỗ trợ trả góp 0% lãi suất qua CCCD hoặc thẻ tín dụng";
+
+  const rawPromotions =
+    typeof product?.promotionsPolicy === "string" && product.promotionsPolicy.trim()
+      ? product.promotionsPolicy.trim()
+      : defaultPromotions;
+
+  const giftItems = rawPromotions
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
+
+  const defaultWarranty = `Bảo hành ${product?.warrantyMonths || 12} tháng chính hãng tại Ngọc Triết Store.\nLỗi 1 đổi 1 trong 30 ngày nếu phát sinh lỗi nhà sản xuất.\nMiễn phí vệ sinh máy & dán lại cường lực trọn đời.`;
+
+  const rawWarranty =
     typeof product?.warrantyPolicy === "string" && product.warrantyPolicy.trim()
       ? product.warrantyPolicy.trim()
-      : "Lỗi 1 đổi 1 trong 10 ngày. Bảo hành 12 tháng. Không bảo hành khi rơi vỡ hoặc vào nước.";
+      : defaultWarranty;
+
+  const warrantyItems = rawWarranty
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
 
   return (
     <div className="container-safe py-12">
@@ -522,8 +604,8 @@ const ProductDetail = () => {
         <span className="text-slate-700">{product.name}</span>
       </nav>
 
-      <div className="mt-8 grid gap-12 lg:grid-cols-2">
-        <div>
+      <div className="mt-8 grid min-w-0 gap-12 lg:grid-cols-2">
+        <div className="min-w-0">
           <div className="overflow-hidden rounded-2xl bg-white p-6 shadow">
             <img
               src={
@@ -531,7 +613,7 @@ const ProductDetail = () => {
                 getProductImage(product, PRODUCT_IMAGE_PLACEHOLDER)
               }
               alt={product.name}
-              className="mx-auto h-96 object-contain"
+              className="mx-auto h-96 w-full max-w-full object-contain"
             />
           </div>
           {galleryImages.length > 1 && (
@@ -559,8 +641,8 @@ const ProductDetail = () => {
           )}
         </div>
 
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900">{product.name}</h1>
+        <div className="min-w-0">
+          <h1 className="break-words text-3xl font-bold text-slate-900">{product.name}</h1>
           <p className="mt-2 text-sm uppercase tracking-wide text-slate-400">
             {product.brand}
           </p>
@@ -577,13 +659,13 @@ const ProductDetail = () => {
             <span>|</span>
             <span>{(product.views || 0).toLocaleString("vi-VN")} lượt xem</span>
             <span>|</span>
-            <span>{product.stock > 0 ? "Còn hàng" : "Hết hàng"}</span>
+            <span>{availableStock > 0 ? "Còn hàng" : "Hết hàng"}</span>
           </div>
 
           <div className="mt-6 rounded-2xl bg-white p-6 shadow">
-            <div className="flex items-baseline gap-3">
-              <p className="text-3xl font-bold text-brand-primary">
-                ${currency(finalPrice)}
+            <div className="flex flex-wrap items-baseline gap-3">
+              <p className="text-3xl font-extrabold text-slate-900">
+                {currency(finalPrice)}
               </p>
               {comparePrice > finalPrice && (
                 <>
@@ -610,11 +692,25 @@ const ProductDetail = () => {
 
           <div className="mt-6 space-y-6 rounded-2xl bg-white p-6 shadow">
             {colors.length > 0 && (
-              <div className="space-y-2">
-                <h3 className="text-lg font-semibold text-slate-900">Chọn màu sắc</h3>
-                <div className="flex flex-wrap gap-2">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-bold uppercase tracking-wider text-slate-800">
+                    Màu sắc
+                  </h3>
+                  {selectedColor && (
+                    <span className="text-xs font-semibold text-blue-700 bg-blue-50 px-3 py-1 rounded-full border border-blue-200">
+                      Đã chọn: <strong className="font-bold">{selectedColor}</strong>
+                    </span>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-2.5">
                   {colors.map((color) => {
                     const active = color === selectedColor;
+                    const colorThumb =
+                      product?.options?.colorImages?.[color]?.[0] ||
+                      variantList.find((v) => v.color === color && v.images?.length > 0)?.images?.[0] ||
+                      null;
+
                     return (
                       <button
                         key={color}
@@ -622,14 +718,22 @@ const ProductDetail = () => {
                         onClick={() => {
                           setLastSelectedOption("color");
                           setSelectedColor(color);
+                          setActiveImageIndex(0);
                         }}
-                        className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
+                        className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-xs sm:text-sm font-semibold transition-all duration-200 ${
                           active
-                            ? "border-brand-primary bg-brand-primary text-white"
-                            : "border-slate-200 bg-slate-50 text-slate-600 hover:border-brand-primary hover:text-brand-primary"
+                            ? "border-blue-600 bg-blue-600 text-white shadow-md shadow-blue-600/25 scale-105"
+                            : "border-slate-200 bg-white text-slate-700 hover:border-slate-400 hover:bg-slate-50"
                         }`}
                       >
-                        {color}
+                        {colorThumb && (
+                          <img
+                            src={getAssetUrl(colorThumb)}
+                            alt={color}
+                            className="h-4 w-4 rounded-full object-cover border border-white/40"
+                          />
+                        )}
+                        <span>{color}</span>
                       </button>
                     );
                   })}
@@ -638,9 +742,18 @@ const ProductDetail = () => {
             )}
 
             {capacities.length > 0 && (
-              <div className="space-y-2">
-                <h3 className="text-lg font-semibold text-slate-900">Chọn dung lượng</h3>
-                <div className="flex flex-wrap gap-2">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-bold uppercase tracking-wider text-slate-800">
+                    Dung lượng
+                  </h3>
+                  {selectedCapacity && (
+                    <span className="text-xs font-semibold text-slate-700 bg-slate-100 px-3 py-1 rounded-full border border-slate-200">
+                      Đã chọn: <strong className="font-bold">{selectedCapacity}</strong>
+                    </span>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-2.5">
                   {capacities.map((capacity) => {
                     const selectable = isCapacitySelectable(capacity);
                     const active = selectable && capacity === selectedCapacity;
@@ -654,10 +767,10 @@ const ProductDetail = () => {
                           setSelectedCapacity(capacity);
                         }}
                         disabled={!selectable}
-                        className={`rounded-full border px-4 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${
+                        className={`rounded-full border px-4 py-2 text-xs sm:text-sm font-semibold transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-40 ${
                           active
-                            ? "border-brand-primary bg-brand-primary text-white"
-                            : "border-slate-200 bg-slate-50 text-slate-600 hover:border-brand-primary hover:text-brand-primary"
+                            ? "border-slate-950 bg-slate-950 text-white shadow-md scale-105"
+                            : "border-slate-200 bg-white text-slate-700 hover:border-slate-400 hover:bg-slate-50"
                         }`}
                       >
                         {capacity}
@@ -675,6 +788,7 @@ const ProductDetail = () => {
                   <button
                     type="button"
                     onClick={() => setQuantity((prev) => Math.max(1, prev - 1))}
+                    disabled={quantity <= 1}
                     className="h-10 w-10 text-xl font-semibold text-slate-600"
                     aria-label="Giảm số lượng"
                   >
@@ -685,7 +799,10 @@ const ProductDetail = () => {
                   </span>
                   <button
                     type="button"
-                    onClick={() => setQuantity((prev) => prev + 1)}
+                    onClick={() =>
+                      setQuantity((prev) => Math.min(availableStock, prev + 1))
+                    }
+                    disabled={quantity >= availableStock}
                     className="h-10 w-10 text-xl font-semibold text-slate-600"
                     aria-label="Tăng số lượng"
                   >
@@ -693,7 +810,7 @@ const ProductDetail = () => {
                   </button>
                 </div>
                 <p className="text-sm text-slate-500">
-                  {product.stock} sản phẩm trong kho
+                  {availableStock} sản phẩm trong kho
                 </p>
               </div>
             </div>
@@ -702,28 +819,95 @@ const ProductDetail = () => {
               <button
                 type="button"
                 onClick={handleAddToCart}
-                className="flex-1 rounded-full border border-brand-primary px-6 py-3 text-sm font-semibold text-brand-primary transition hover:bg-brand-primary hover:text-white"
+                disabled={availableStock < 1}
+                className="flex-1 rounded-xl border-2 border-slate-900 px-6 py-3 text-sm font-bold text-slate-900 transition hover:bg-slate-100"
               >
                 Thêm vào giỏ hàng
               </button>
               <button
                 type="button"
                 onClick={handleBuyNow}
-                className="flex-1 rounded-full bg-brand-primary px-6 py-3 text-sm font-semibold text-white transition hover:bg-brand-dark"
+                disabled={availableStock < 1}
+                className="flex-1 rounded-xl bg-slate-900 px-6 py-3 text-sm font-bold text-white shadow-lg transition hover:bg-blue-600"
               >
                 Mua ngay
               </button>
             </div>
           </div>
 
-          <div className="mt-6 rounded-2xl bg-white p-6 shadow">
-            <h2 className="text-lg font-semibold text-slate-900">Chính sách bảo hành</h2>
-            <p className="mt-2 text-sm text-slate-600">{warrantyPolicy}</p>
-            <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-slate-500">
-              <li>Lỗi kỹ thuật được đổi mới trong 10 ngày đầu.</li>
-              <li>Bảo hành tối đa 12 tháng tại hệ thống cửa hàng.</li>
-              <li>Không bảo hành nếu sản phẩm rơi vỡ hoặc vào nước.</li>
-            </ul>
+          {/* ƯU ĐÃI & QUÀ TẶNG KÈM VIP */}
+          <div className="mt-6 rounded-2xl border border-amber-200/80 bg-gradient-to-br from-amber-50/70 via-white to-orange-50/30 p-5 shadow-sm transition hover:shadow-md">
+            <div className="flex items-center justify-between border-b border-amber-200/60 pb-3">
+              <div className="flex items-center gap-2.5">
+                <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-500 text-white shadow-sm text-base">
+                  🎁
+                </span>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide">
+                    Ưu Đãi Đặc Quyền &amp; Quà Tặng
+                  </h3>
+                  <p className="text-xs text-amber-800">
+                    Áp dụng khi mua tại Ngọc Triết Store
+                  </p>
+                </div>
+              </div>
+              <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-[11px] font-bold text-amber-800 border border-amber-300">
+                VIP Gifts
+              </span>
+            </div>
+
+            <div className="mt-3.5 space-y-2">
+              {giftItems.map((item, idx) => (
+                <div key={idx} className="flex items-start gap-2.5 text-xs sm:text-sm text-slate-700">
+                  <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 font-bold text-[10px]">
+                    ✓
+                  </span>
+                  <span className="leading-snug">{item}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* CHÍNH SÁCH BẢO HÀNH CHÍNH HÃNG */}
+          <div className="mt-4 rounded-2xl border border-blue-200/80 bg-gradient-to-br from-blue-50/60 via-white to-slate-50/40 p-5 shadow-sm transition hover:shadow-md">
+            <div className="flex items-center justify-between border-b border-blue-200/60 pb-3">
+              <div className="flex items-center gap-2.5">
+                <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-600 text-white shadow-sm text-base">
+                  🛡️
+                </span>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide">
+                    Chính Sách Bảo Hành Chính Hãng
+                  </h3>
+                  <p className="text-xs text-blue-700">
+                    Ngọc Triết Store - Cam kết uy tín &amp; tận tâm
+                  </p>
+                </div>
+              </div>
+              <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-[11px] font-bold text-blue-700 border border-blue-300">
+                {product?.warrantyMonths ? `${product.warrantyMonths} Tháng` : "12 Tháng"}
+              </span>
+            </div>
+
+            <div className="mt-3.5 space-y-2">
+              {warrantyItems.map((item, idx) => (
+                <div key={idx} className="flex items-start gap-2.5 text-xs sm:text-sm text-slate-700">
+                  <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-600 font-bold text-[10px]">
+                    ✓
+                  </span>
+                  <span className="leading-snug">{item}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-4 pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+              <span className="flex items-center gap-1 font-medium text-slate-700">
+                <span>⚡</span> Đổi mới 30 ngày đầu lỗi NSX
+              </span>
+              <span className="flex items-center gap-1 font-medium text-slate-700">
+                <span>✨</span> Vệ sinh &amp; dán skin trọn đời
+              </span>
+            </div>
           </div>
 
           {product.specs && Object.keys(product.specs).length > 0 && (

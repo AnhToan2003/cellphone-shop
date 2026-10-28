@@ -33,6 +33,14 @@ import {
   adminListBrands,
   adminUpdateBrand,
 } from "../controllers/brand.controller.js";
+import {
+  adminAddSubCategory,
+  adminCreateCategory,
+  adminDeleteCategory,
+  adminDeleteSubCategory,
+  adminListCategories,
+  adminUpdateCategory,
+} from "../controllers/category.controller.js";
 import { authGuard, isAdmin } from "../middleware/auth.js";
 import { productUpload } from "../middleware/upload.js";
 
@@ -67,5 +75,13 @@ router.get("/brands", adminListBrands);
 router.post("/brands", adminCreateBrand);
 router.patch("/brands/:id", adminUpdateBrand);
 router.delete("/brands/:id", adminDeleteBrand);
+
+router.get("/categories", adminListCategories);
+router.post("/categories", adminCreateCategory);
+router.put("/categories/:id", adminUpdateCategory);
+router.patch("/categories/:id", adminUpdateCategory);
+router.delete("/categories/:id", adminDeleteCategory);
+router.post("/categories/:id/subcategories", adminAddSubCategory);
+router.delete("/categories/:id/subcategories", adminDeleteSubCategory);
 
 export default router;

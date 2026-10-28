@@ -1,9 +1,7 @@
-﻿import fs from "fs";
-import path from "path";
 import { z } from "zod";
 
 import { Banner } from "../models/Banner.js";
-import { uploadsBasePath } from "../middleware/upload.js";
+import { deleteUploadedImage, saveUploadedImage } from "../middleware/upload.js";
 
 const DEFAULT_BANNER = {
   sentence: "Welcome to Cellphone Shop",
@@ -57,7 +55,7 @@ export const createBanner = async (req, res, next) => {
 
     const parsed = bannerBodySchema.parse(req.body ?? {});
 
-    const imageUrl = `/uploads/banners/${req.file.filename}`;
+    const imageUrl = await saveUploadedImage(req.file, "banners");
 
     const banner = await Banner.create({
       imageUrl,
@@ -86,13 +84,8 @@ export const deleteBanner = async (req, res, next) => {
       });
     }
 
-    const bannerFile = banner.imageUrl ? path.join(uploadsBasePath, "banners", path.basename(banner.imageUrl)) : null;
-
     await banner.deleteOne();
-
-    if (bannerFile && fs.existsSync(bannerFile)) {
-      fs.unlink(bannerFile, () => {});
-    }
+    await deleteUploadedImage(banner.imageUrl, "banners");
 
     res.json({
       success: true,
@@ -115,16 +108,11 @@ export const updateBanner = async (req, res, next) => {
 
     const parsed = bannerBodySchema.parse(req.body ?? {});
 
-    let nextImageUrl = banner.imageUrl;
+    const previousImageUrl = banner.imageUrl;
+    let nextImageUrl = previousImageUrl;
 
     if (req.file) {
-      nextImageUrl = `/uploads/banners/${req.file.filename}`;
-      const oldBannerFile = banner.imageUrl
-        ? path.join(uploadsBasePath, "banners", path.basename(banner.imageUrl))
-        : null;
-      if (oldBannerFile && fs.existsSync(oldBannerFile)) {
-        fs.unlink(oldBannerFile, () => {});
-      }
+      nextImageUrl = await saveUploadedImage(req.file, "banners");
     }
 
     banner.title = parsed.title.trim();
@@ -133,6 +121,10 @@ export const updateBanner = async (req, res, next) => {
     banner.imageUrl = nextImageUrl;
 
     await banner.save();
+
+    if (req.file && previousImageUrl !== nextImageUrl) {
+      await deleteUploadedImage(previousImageUrl, "banners");
+    }
 
     res.json({
       success: true,

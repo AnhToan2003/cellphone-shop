@@ -6,6 +6,7 @@ import { toast } from "react-hot-toast";
 import { fetchMyOrders } from "../store/slices/orderSlice.js";
 import { cancelMyOrder, createProductReview } from "../services/api.js";
 import { useAuth } from "../context/AuthContext.jsx";
+import { getAssetUrl } from "../utils/assets.js";
 
 const currency = (value) =>
   new Intl.NumberFormat("vi-VN", {
@@ -24,15 +25,8 @@ const STATUS_META = {
 };
 
 const PAYMENT_METHOD_LABELS = {
-  cod: "Thanh toán khi nhận hàng",
-  vietqr: "Thanh toán VietQR",
-};
-
-const VIETQR_STATUS_LABELS = {
-  pending: "Chưa thanh toán",
-  awaiting: "Đang chờ chuyển khoản",
-  completed: "Đã thanh toán",
-  failed: "Thanh toán thất bại",
+  cod: "Thanh toán khi nhận hàng (COD)",
+  store: "Nhận máy tại Ngọc Triết Store",
 };
 
 const REVIEWABLE_STATUSES = ["processing", "shipping", "shipped", "delivered"];
@@ -230,11 +224,22 @@ const Orders = () => {
           {createdAt && <span>Đặt lúc {createdAt}</span>}
         </div>
         <div className="flex items-center gap-3">
-          <span
-            className={`rounded-full px-4 py-1 text-xs font-semibold uppercase tracking-wide ${statusMeta.tone}`}
-          >
-            {statusMeta.label}
-          </span>
+          <div className="flex items-center gap-2">
+            <span
+              className={`rounded-full px-3.5 py-1 text-xs font-semibold uppercase tracking-wide ${statusMeta.tone}`}
+            >
+              {order?.statusLabel || statusMeta.label}
+            </span>
+            {order?.paymentMethod === "store" ? (
+              <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-[11px] font-bold text-blue-600 border border-blue-200">
+                🏪 Tại Showroom
+              </span>
+            ) : (
+              <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-bold text-emerald-600 border border-emerald-200">
+                🚚 Ship COD
+              </span>
+            )}
+          </div>
           {canCancel && (
             <button
               type="button"
@@ -283,7 +288,7 @@ const Orders = () => {
               <div className="flex items-start gap-3">
                 {image ? (
                   <img
-                    src={image}
+                    src={getAssetUrl(image)}
                     alt={product?.name || item?.name}
                     className="h-16 w-16 flex-shrink-0 rounded-xl border border-slate-100 object-cover"
                   />
@@ -339,21 +344,13 @@ const Orders = () => {
     const payment = order?.payment || {};
     const paymentMethod = order?.paymentMethod || "cod";
     const paymentMethodLabel =
-      PAYMENT_METHOD_LABELS[paymentMethod] || PAYMENT_METHOD_LABELS.cod;
+      PAYMENT_METHOD_LABELS[paymentMethod] || "Phương thức cũ không còn hỗ trợ";
     const paymentStatusLabel =
-      paymentMethod === "vietqr"
-        ? VIETQR_STATUS_LABELS[payment.status] ||
-          VIETQR_STATUS_LABELS.pending
-        : PAYMENT_METHOD_LABELS.cod;
-    const paymentReference =
-      typeof payment.reference === "string" ? payment.reference.trim() : "";
-    const paymentTransferContent =
-      typeof payment.transferContent === "string"
-        ? payment.transferContent.trim()
-        : "";
-    const paymentConfirmedAt = payment?.confirmedAt
-      ? new Date(payment.confirmedAt).toLocaleString("vi-VN")
-      : null;
+      paymentMethod === "cod"
+        ? "Thanh toán khi nhận hàng"
+        : paymentMethod === "store"
+          ? "Thanh toán tại cửa hàng khi nhận máy"
+          : "Không còn hỗ trợ";
     const paymentMessage =
       typeof payment.message === "string" ? payment.message.trim() : "";
 
@@ -379,10 +376,22 @@ const Orders = () => {
       <div className="space-y-5 rounded-2xl border border-slate-100 bg-slate-50 p-5">
         <div>
           <p className="text-sm font-semibold uppercase tracking-wide text-slate-400">
-            Thông tin giao hàng
+            {order?.paymentMethod === "store" ? "Hình thức nhận hàng" : "Thông tin giao hàng"}
           </p>
           <div className="mt-2 space-y-2 text-sm text-slate-600">
-            {shippingDetails.length ? (
+            {order?.paymentMethod === "store" ? (
+              <div className="rounded-xl border border-blue-200 bg-blue-50/70 p-3.5 space-y-1">
+                <p className="font-bold text-blue-900 flex items-center gap-1.5">
+                  <span>🏪</span> Nhận máy trực tiếp tại Showroom Ngọc Triết Store
+                </p>
+                <p className="text-xs text-slate-700">
+                  Người nhận: <span className="font-semibold text-slate-900">{shippingInfo.fullName}</span> • SĐT: <span className="font-semibold text-slate-900">{shippingInfo.phone}</span>
+                </p>
+                <p className="text-xs text-slate-600 pt-0.5 leading-relaxed">
+                  Mời bạn đến showroom trải nghiệm, test máy &amp; nhận quà tặng kèm. Hotline hỗ trợ: <span className="font-semibold text-blue-700">039 555 4268</span>
+                </p>
+              </div>
+            ) : shippingDetails.length ? (
               shippingDetails.map((detail) => (
                 <p key={detail.label}>
                   <span className="font-semibold text-slate-800">
@@ -414,34 +423,6 @@ const Orders = () => {
               <span className="font-semibold text-slate-800">Trạng thái:</span>{" "}
               {paymentStatusLabel}
             </p>
-            {paymentReference && (
-              <p>
-                <span className="font-semibold text-slate-800">
-                  Mã tham chiếu:
-                </span>{" "}
-                <span className="font-mono text-xs">{paymentReference}</span>
-              </p>
-            )}
-            {paymentTransferContent && (
-              <div>
-                <p>
-                  <span className="font-semibold text-slate-800">
-                    Nội dung chuyển khoản:
-                  </span>
-                </p>
-                <p className="overflow-hidden text-ellipsis font-mono text-xs text-slate-500">
-                  {paymentTransferContent}
-                </p>
-              </div>
-            )}
-            {paymentConfirmedAt && (
-              <p>
-                <span className="font-semibold text-slate-800">
-                  Xác nhận lúc:
-                </span>{" "}
-                {paymentConfirmedAt}
-              </p>
-            )}
             {paymentMessage && (
               <p className="text-xs text-slate-500">{paymentMessage}</p>
             )}

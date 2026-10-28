@@ -1,11 +1,11 @@
-﻿import PropTypes from "prop-types";
+import PropTypes from "prop-types";
 import { NavLink } from "react-router-dom";
 import {
   HiOutlineChartBar,
   HiOutlineClipboardList,
   HiOutlinePhotograph,
   HiOutlineUserGroup,
-  HiOutlineColorSwatch,
+  HiOutlineCollection,
   HiOutlineTag,
 } from "react-icons/hi";
 import { TbDeviceMobile } from "react-icons/tb";
@@ -37,6 +37,11 @@ const links = [
     icon: TbDeviceMobile,
   },
   {
+    to: "/admin/categories",
+    label: "Quản lý danh mục",
+    icon: HiOutlineCollection,
+  },
+  {
     to: "/admin/orders",
     label: "Quản lý đơn hàng",
     icon: HiOutlineClipboardList,
@@ -57,13 +62,8 @@ const links = [
     icon: HiOutlineTag,
   },
   {
-    to: "/admin/home-categories",
-    label: "Danh mục trang chủ",
-    icon: HiOutlineColorSwatch,
-  },
-  {
     to: "/admin/banners",
-    label: "Chỉnh sửa banner",
+    label: "Quản lý banner & Nổi bật",
     icon: HiOutlinePhotograph,
   },
   
@@ -89,26 +89,43 @@ const AdminSidebar = ({ isOpen, onClose }) => (
           <IoClose size={18} />
         </button>
       </div>
-      <nav className="mt-6 space-y-2 text-sm font-medium">
-        {links.map(({ to, label, icon: Icon, exact }) => (
-          <NavLink
-            key={to}
-            to={to}
-            end={Boolean(exact)}
-            onClick={onClose}
-            className={({ isActive }) =>
-              [
-                "flex items-center gap-3 rounded-xl px-4 py-3 transition",
-                isActive
-                  ? "bg-brand-primary/20 text-brand-primary"
-                  : "text-slate-300 hover:bg-slate-900 hover:text-white",
-              ].join(" ")
-            }
-          >
-            <Icon size={18} />
-            <span>{label}</span>
-          </NavLink>
-        ))}
+      <nav className="mt-6 space-y-1.5 text-sm font-medium">
+        {links.map((link) => {
+          const Icon = link.icon;
+          return (
+            <NavLink
+              key={link.to}
+              to={link.to}
+              end={Boolean(link.exact)}
+              onClick={onClose}
+              className={({ isActive }) =>
+                [
+                  "group flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm transition-all duration-200 border",
+                  isActive
+                    ? "border-blue-500/40 bg-blue-600/15 text-blue-400 font-semibold shadow-sm shadow-blue-500/10"
+                    : "border-transparent text-slate-300 hover:border-slate-800 hover:bg-slate-900/90 hover:text-white",
+                ].join(" ")
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  <Icon
+                    size={19}
+                    className={`transition-colors ${
+                      isActive
+                        ? "text-blue-400"
+                        : "text-slate-400 group-hover:text-slate-200"
+                    }`}
+                  />
+                  <span>{link.label}</span>
+                  {isActive && (
+                    <span className="ml-auto h-1.5 w-1.5 rounded-full bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.9)]" />
+                  )}
+                </>
+              )}
+            </NavLink>
+          );
+        })}
       </nav>
     </div>
     {isOpen && (

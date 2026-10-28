@@ -46,7 +46,7 @@ const normalizeVariantValue = (value) =>
     ? ""
     : value.toString().trim().toLowerCase();
 
-const findVariantForSelection = (variants = [], selection = {}) => {
+export const findVariantForSelection = (variants = [], selection = {}) => {
   if (!Array.isArray(variants) || variants.length === 0) {
     return null;
   }

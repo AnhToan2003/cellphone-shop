@@ -86,4 +86,49 @@ describe("API smoke tests", () => {
     expect(response.body.data).toHaveLength(1);
     expect(response.body.data[0].name).toBe("iPhone 15 Pro");
   });
+
+  test("concurrent orders reserve variant stock atomically at its own price", async () => {
+    const registration = await request(testApp)
+      .post("/api/auth/register")
+      .send({
+        name: "Order Test User",
+        username: "order-test-user",
+        email: "orders@example.com",
+        password: "password123",
+      });
+
+    const product = await Product.create({
+      name: "Variant Stock Test",
+      brand: "Test",
+      price: 100,
+      stock: 1,
+      imageUrl: "https://example.com/product.jpg",
+      variants: [{ color: "Blue", capacity: "128GB", price: 250, stock: 1 }],
+    });
+
+    const body = {
+      items: [{ productId: product.id, quantity: 1, color: "Blue", capacity: "128GB" }],
+      shippingInfo: { fullName: "Order Test User", phone: "0900000000", address: "1 Test Street" },
+      paymentMethod: "cod",
+    };
+    const placeOrder = () =>
+      request(testApp)
+        .post("/api/orders")
+        .set("Authorization", `Bearer ${registration.body.data.token}`)
+        .send(body);
+
+    const responses = await Promise.all([placeOrder(), placeOrder()]);
+    expect(responses.map(({ status }) => status).sort()).toEqual([201, 409]);
+
+    const acceptedOrder = responses.find(({ status }) => status === 201);
+    expect(acceptedOrder.body.data.items[0]).toMatchObject({
+      price: 250,
+      color: "Blue",
+      capacity: "128GB",
+    });
+
+    const updatedProduct = await Product.findById(product.id).lean();
+    expect(updatedProduct.stock).toBe(0);
+    expect(updatedProduct.variants[0].stock).toBe(0);
+  });
 });

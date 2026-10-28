@@ -38,7 +38,7 @@ const Cart = () => {
         </p>
         <Link
           to="/"
-          className="mt-6 inline-block rounded-full bg-brand-primary px-6 py-3 text-sm font-semibold text-white transition hover:bg-brand-dark"
+          className="mt-6 inline-block rounded-xl bg-slate-900 px-6 py-3 text-sm font-bold text-white transition hover:bg-slate-800 shadow"
         >
           Tiếp tục mua sắm
         </Link>
@@ -97,6 +97,7 @@ const Cart = () => {
                     <button
                       type="button"
                       onClick={() => dispatch(increaseQuantity(item.id))}
+                      disabled={item.quantity >= (item.availableStock ?? 99)}
                       className="h-9 w-9 text-lg font-semibold text-slate-600"
                       aria-label="Tăng số lượng"
                     >
@@ -112,7 +113,7 @@ const Cart = () => {
                 <button
                   type="button"
                   onClick={() => dispatch(removeItem(item.id))}
-                  className="text-sm font-semibold text-brand-primary hover:text-brand-dark"
+                  className="text-sm font-semibold text-rose-500 hover:text-rose-700"
                 >
                   Xóa
                 </button>
@@ -121,37 +122,37 @@ const Cart = () => {
           ))}
         </div>
 
-        <aside className="rounded-2xl bg-white p-6 shadow">
-          <h2 className="text-xl font-semibold text-slate-900">
+        <aside className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h2 className="text-xl font-bold text-slate-900">
             Thông tin đơn hàng
           </h2>
           <div className="mt-4 space-y-3 text-sm">
             <div className="flex items-center justify-between text-slate-500">
               <span>Tạm tính</span>
-              <span>{currency(totalAmount)}</span>
+              <span className="font-semibold text-slate-800">{currency(totalAmount)}</span>
             </div>
             <div className="flex items-center justify-between text-slate-500">
               <span>Phí vận chuyển</span>
               <span>Được tính khi thanh toán</span>
             </div>
-            <div className="flex items-center justify-between text-base font-semibold text-slate-900">
+            <div className="border-t border-slate-100 pt-3 flex items-center justify-between text-base font-bold text-slate-900">
               <span>Tổng cộng</span>
-              <span>{currency(totalAmount)}</span>
+              <span className="text-lg text-blue-600">{currency(totalAmount)}</span>
             </div>
           </div>
           <button
             type="button"
             onClick={handleCheckout}
-            className="mt-6 w-full rounded-full bg-brand-primary px-6 py-3 text-sm font-semibold text-white transition hover:bg-brand-dark"
+            className="mt-6 w-full rounded-xl bg-slate-900 px-6 py-3.5 text-sm font-bold text-white shadow-lg transition hover:bg-blue-600"
           >
             Tiến hành thanh toán
           </button>
           <button
             type="button"
             onClick={() => dispatch(clearCart())}
-            className="mt-3 w-full rounded-full border border-slate-200 px-6 py-3 text-sm font-semibold text-slate-600 transition hover:border-brand-primary hover:text-brand-primary"
+            className="mt-3 w-full rounded-xl border border-slate-200 px-6 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
           >
-            Xóa giỏ hàng
+            Xóa toàn bộ giỏ hàng
           </button>
         </aside>
       </div>

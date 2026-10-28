@@ -15,35 +15,39 @@ export default {
     extend: {
       colors: {
         brand: {
-          primary: "#E11D48",
-          dark: "#be123c",
-          light: "#f43f5e",
-          accent: "#ff8fab",
-          glow: "#fda4af",
+          primary: "#0F172A",
+          dark: "#020617",
+          light: "#1E293B",
+          accent: "#2563EB",
+          blue: "#2563EB",
+          silver: "#E2E8F0",
+          titanium: "#94A3B8",
+          glow: "#38BDF8",
         },
-        muted: "#f5f7ff",
-        night: "#0B1220",
-        surface: "#0f172a",
-        aurora: "#3b82f6",
+        muted: "#F8FAFC",
+        night: "#0B0F19",
+        surface: "#0F172A",
+        aurora: "#2563EB",
       },
       fontFamily: {
-        sans: ["Be Vietnam Pro", "Inter", "Roboto", "system-ui", "sans-serif"],
-        display: ["Sora", "Be Vietnam Pro", "Inter", "system-ui", "sans-serif"],
+        sans: ["Plus Jakarta Sans", "Be Vietnam Pro", "Inter", "system-ui", "sans-serif"],
+        display: ["Plus Jakarta Sans", "Sora", "Be Vietnam Pro", "sans-serif"],
       },
       boxShadow: {
-        header: "0 14px 40px rgba(225, 29, 72, 0.2)",
-        card: "0 20px 50px rgba(15, 23, 42, 0.08)",
-        glass: "0 25px 65px rgba(15, 23, 42, 0.25)",
+        header: "0 4px 25px rgba(15, 23, 42, 0.18)",
+        card: "0 10px 30px -4px rgba(15, 23, 42, 0.06), 0 4px 12px -2px rgba(15, 23, 42, 0.04)",
+        glass: "0 20px 40px -10px rgba(15, 23, 42, 0.12)",
       },
       backgroundImage: {
         "hero-glow":
-          "radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.35), transparent 50%), radial-gradient(circle at 80% 0%, rgba(59, 130, 246, 0.4), transparent 55%)",
+          "radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.08), transparent 50%), radial-gradient(circle at 80% 0%, rgba(37, 99, 235, 0.15), transparent 55%)",
         "mesh-pink":
-          "radial-gradient(circle at 10% 20%, rgba(236, 72, 153, 0.25), transparent 35%), radial-gradient(circle at 80% 0%, rgba(14, 165, 233, 0.35), transparent 50%), radial-gradient(circle at 50% 80%, rgba(248, 250, 252, 0.5), transparent 55%)",
+          "radial-gradient(circle at 10% 20%, rgba(226, 232, 240, 0.6), transparent 45%), radial-gradient(circle at 80% 0%, rgba(241, 245, 249, 0.8), transparent 50%)",
       },
       animation: {
         float: "float 6s ease-in-out infinite",
         pulseSlow: "pulseSlow 8s ease-in-out infinite",
+        "fade-in-up": "fadeInUp 0.25s ease-out both",
       },
       keyframes: {
         float: {
@@ -53,6 +57,10 @@ export default {
         pulseSlow: {
           "0%, 100%": { opacity: 0.45 },
           "50%": { opacity: 1 },
+        },
+        fadeInUp: {
+          "0%": { opacity: 0, transform: "translateY(12px)" },
+          "100%": { opacity: 1, transform: "translateY(0)" },
         },
       },
       borderRadius: {

@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env node
+#!/usr/bin/env node
 import "dotenv/config";
 
 import { connectDB, disconnectDB } from "../db.js";
@@ -106,9 +106,9 @@ const runSeed = async () => {
     ]);
 
     const admin = await User.create({
-      name: "Cellphone Shop Admin",
+      name: "NgocTrietStore",
       username: "Admin",
-      email: "admin@cellphones-shop.dev",
+      email: "admin@ngoctrietstore.vn",
       password: "Admin123!",
       role: "admin",
     });

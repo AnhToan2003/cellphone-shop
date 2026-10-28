@@ -1,6 +1,7 @@
 # dependencies
 node_modules/
 server/node_modules/
+client/node_modules/
 
 # environment files
 .env
@@ -10,6 +11,13 @@ server/.env
 dist/
 build/
 coverage/
+.vercel/
+client/test-results/
+client/playwright-report/
+client/trace-inspect/
+temp*.txt
+search-temp.js
+signup.js
 
 # misc
 .DS_Store

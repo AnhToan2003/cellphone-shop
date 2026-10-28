@@ -1,113 +1,123 @@
 import { Link } from "react-router-dom";
+import { FiShield, FiCheckCircle, FiTruck } from "react-icons/fi";
 
-const CONTACT_ITEMS = [
-  { label: "Hotline", value: "0794 460 285" },
-  { label: "Email", value: "support@cellphones.dev" },
-  { label: "Thời gian", value: "08:00 - 21:00" },
-];
-
-const POLICY_ITEMS = ["Đổi trả 30 ngày", "Giao hàng toàn quốc", "Thanh toán COD/Online"];
-const INFO_LINKS = [
-  { label: "Về chúng tôi", to: "/about" },
-  { label: "Câu hỏi thường gặp (FAQ)", to: "/faq" },
-];
-const SOCIAL_ITEMS = ["Facebook", "Zalo", "YouTube", "TikTok"];
 const SERVICE_HIGHLIGHTS = [
-  { title: "GIAO NHANH 2H", subtitle: "TOÀN QUỐC" },
-  { title: "TRẢ GÓP 0%", subtitle: "THAO TÁC ONLINE" },
-  { title: "HỖ TRỢ 24/7", subtitle: "0794 460 285" },
+  {
+    title: "100% CHÍNH HÃNG APPLE",
+    subtitle: "Thiết bị & phụ kiện chuẩn chất lượng",
+    icon: <FiShield className="text-white" size={20} />,
+  },
+  {
+    title: "BẢO HÀNH 1 ĐỔI 1",
+    subtitle: "Kỹ thuật hỗ trợ chuyên nghiệp, an tâm",
+    icon: <FiCheckCircle className="text-white" size={20} />,
+  },
+  {
+    title: "GIAO HÀNG TOÀN QUỐC",
+    subtitle: "Được kiểm tra máy trước khi nhận",
+    icon: <FiTruck className="text-white" size={20} />,
+  },
 ];
 
-const Footer = () => {
+const APPLE_LINKS = [
+  { label: "iPhone", to: "/products?category=iPhone" },
+  { label: "iPad", to: "/products?category=iPad" },
+  { label: "MacBook & Mac", to: "/products?category=Mac" },
+  { label: "Apple Watch", to: "/products?category=Apple Watch" },
+  { label: "Phụ kiện Apple", to: "/products?category=Phụ kiện" },
+];
+
+const POLICY_ITEMS = [
+  { label: "Chính sách bảo hành", to: "/warranty" },
+  { label: "Về Ngọc Triết Store", to: "/about" },
+  { label: "Câu hỏi thường gặp", to: "/faq" },
+];
+
+export default function Footer() {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="mt-16 bg-gradient-to-b from-slate-900 via-slate-950 to-black text-white">
-      <div className="container-safe grid gap-4 py-10 text-center uppercase tracking-[0.28em] text-white/85 sm:grid-cols-3">
-        {SERVICE_HIGHLIGHTS.map((item) => (
-          <div
-            key={item.title}
-            className="rounded-[32px] border border-white/25 bg-white/5 px-6 py-5 backdrop-blur"
-          >
-            <p className="text-sm font-semibold">{item.title}</p>
-            <p className="mt-2 text-[11px] tracking-[0.35em] text-white/70">{item.subtitle}</p>
-          </div>
-        ))}
+    <footer className="mt-20 bg-slate-950 text-slate-300 border-t border-white/10">
+      {/* Service Highlights Bar */}
+      <div className="border-b border-white/10 bg-slate-900/40 py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 grid gap-4 sm:grid-cols-3">
+          {SERVICE_HIGHLIGHTS.map((item) => (
+            <div
+              key={item.title}
+              className="flex items-center gap-4 rounded-2xl border border-white/5 bg-white/5 p-5 shadow-sm transition hover:border-white/10 hover:bg-white/10"
+            >
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white border border-white/10">
+                {item.icon}
+              </div>
+              <div>
+                <p className="text-xs font-bold text-white tracking-wider">{item.title}</p>
+                <p className="mt-0.5 text-xs text-slate-400">{item.subtitle}</p>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
-      <div className="container-safe grid gap-10 py-16 lg:grid-cols-5">
+      {/* Main Footer Links */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12 lg:py-16 grid gap-10 sm:grid-cols-2 lg:grid-cols-3">
+        {/* Brand Info */}
         <div className="space-y-4">
-          <p className="pill-badge bg-white/10 text-white">Cellphone Shop</p>
-          <h3 className="text-2xl font-semibold text-white">
-            Công nghệ sống động, trải nghiệm đa kênh.
-          </h3>
-          <p className="text-sm text-white/70">
-            Khám phá showroom trực tuyến với kho sản phẩm flagship, giao nhanh 2h và ưu đãi độc quyền chỉ
-            tại Cellphone Shop.
+          <div className="flex items-center gap-3">
+            <img
+              src="/logo.jpg"
+              alt="Ngọc Triết Store"
+              className="h-11 w-11 rounded-full border border-white/20 object-cover shadow"
+            />
+            <div>
+              <h3 className="font-display text-base font-bold text-white tracking-tight">
+                NGỌC TRIẾT STORE
+              </h3>
+              <p className="text-xs text-slate-400 font-medium">Chuyên Thiết Bị & Phụ Kiện Apple</p>
+            </div>
+          </div>
+
+          <p className="text-xs text-slate-400 leading-relaxed max-w-sm">
+            Cửa hàng chuyên kinh doanh, tư vấn và sửa chữa thiết bị Apple chính hãng: iPhone, iPad, MacBook, Apple Watch và phụ kiện cao cấp.
           </p>
         </div>
 
+        {/* Apple Ecosystem Links */}
         <div>
-          <h4 className="text-sm font-semibold uppercase tracking-[0.3em] text-white/60">Hỗ trợ</h4>
-          <ul className="mt-4 space-y-3 text-sm text-white/80">
-            {CONTACT_ITEMS.map((item) => (
-              <li key={item.label} className="flex flex-col">
-                <span className="text-xs uppercase tracking-[0.3em] text-white/50">
-                  {item.label}
-                </span>
-                <span className="text-base font-semibold text-white">{item.value}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <div>
-          <h4 className="text-sm font-semibold uppercase tracking-[0.3em] text-white/60">Chính sách</h4>
-          <ul className="mt-4 space-y-3 text-sm text-white/80">
-            {POLICY_ITEMS.map((item) => (
-              <li
-                key={item}
-                className="rounded-2xl border border-white/10 px-4 py-2 text-white/70 transition hover:border-white/40 hover:text-white"
-              >
-                {item}
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <div>
-          <h4 className="text-sm font-semibold uppercase tracking-[0.3em] text-white/60">Thông tin</h4>
-          <ul className="mt-4 space-y-3 text-sm text-white/80">
-            {INFO_LINKS.map((item) => (
+          <h4 className="text-xs font-bold uppercase tracking-wider text-white border-b border-white/10 pb-3">
+            Sản phẩm Apple
+          </h4>
+          <ul className="mt-4 space-y-2 text-xs text-slate-400">
+            {APPLE_LINKS.map((item) => (
               <li key={item.label}>
-                <Link
-                  to={item.to}
-                  className="block rounded-2xl border border-white/10 px-4 py-2 text-white/80 transition hover:border-white/40 hover:text-white"
-                >
-                  {item.label}
+                <Link to={item.to} className="transition hover:text-white flex items-center gap-1.5">
+                  <span className="text-slate-500">›</span> {item.label}
                 </Link>
               </li>
             ))}
           </ul>
         </div>
 
+        {/* Policies & Support */}
         <div>
-          <h4 className="text-sm font-semibold uppercase tracking-[0.3em] text-white/60">Kết nối</h4>
-          <ul className="mt-4 grid grid-cols-2 gap-3 text-sm text-white/80">
-            {SOCIAL_ITEMS.map((item) => (
-              <li key={item} className="rounded-2xl border border-white/10 px-4 py-2 text-center">
-                {item}
+          <h4 className="text-xs font-bold uppercase tracking-wider text-white border-b border-white/10 pb-3">
+            Chính sách & Hỗ trợ
+          </h4>
+          <ul className="mt-4 space-y-2 text-xs text-slate-400">
+            {POLICY_ITEMS.map((item) => (
+              <li key={item.label}>
+                <Link to={item.to} className="transition hover:text-white flex items-center gap-1.5">
+                  <span className="text-slate-500">›</span> {item.label}
+                </Link>
               </li>
             ))}
           </ul>
         </div>
       </div>
 
-      <div className="border-t border-white/10 py-6 text-center text-xs text-white/60">
-        © {year} Cellphone Shop. Mọi quyền được bảo lưu.
+      {/* Copyright */}
+      <div className="border-t border-white/10 bg-black/60 py-5 text-center text-xs text-slate-500">
+        © {year} <span className="font-semibold text-slate-400">Ngọc Triết Store</span>. Chuyên Thiết Bị & Phụ Kiện Apple. Mọi quyền được bảo lưu.
       </div>
     </footer>
   );
-};
-
-export default Footer;
+}

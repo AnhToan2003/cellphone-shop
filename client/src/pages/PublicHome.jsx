@@ -1,58 +1,81 @@
-﻿import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 import Banner from "../components/Banner.jsx";
 import ProductCard from "../components/ProductCard.jsx";
 import SkeletonCard from "../components/SkeletonCard.jsx";
 import { fetchProducts, setFilters } from "../store/slices/productSlice.js";
 import { normalizeText } from "../utils/text.js";
-import { getProductImage } from "../utils/assets.js";
-import { fetchBrands, fetchHomeCategories } from "../services/api.js";
+import { getProductImage, getAssetUrl } from "../utils/assets.js";
+import { apiClient } from "../api/axios.js";
+import { fetchPublicCategories } from "../services/api.js";
 
 const HERO_FALLBACK =
   "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=1400&q=80";
 const HERO_SUBTITLE =
   "Ưu đãi độc quyền, giao nhanh toàn quốc và nhiều chương trình trả góp linh hoạt cho từng flagship mới nhất.";
 
-const FALLBACK_BRANDS = ["Apple", "Samsung", "Xiaomi", "OPPO", "Honor", "Vivo"].map(
-  (name, index) => ({
-    name,
-    slug: name.toLowerCase(),
-    order: index,
-  })
-);
-
-const PRODUCT_CATEGORIES = [
+const APPLE_FULL_CATALOG = [
   {
-    title: "Luxury Flagship",
-    subtitle: "iPhone 15 Pro, Galaxy Z v� Find X series",
-    gradient: "from-fuchsia-500 via-rose-500 to-amber-400",
+    id: "",
+    label: "Tất cả sản phẩm",
+    icon: "🍎",
+    subCategories: [],
   },
   {
-    title: "Gaming Beast",
-    subtitle: "Snapdragon 8, màn 144Hz, tản nhiệt chủ động",
-    gradient: "from-cyan-500 via-blue-500 to-indigo-500",
+    id: "iPhone",
+    label: "iPhone",
+    icon: "📱",
+    subCategories: [
+      "iPhone 16 Series",
+      "iPhone 15 Series",
+      "iPhone 14 Series",
+      "iPhone 13 Series",
+      "iPhone 12 & Cũ hơn",
+    ],
   },
   {
-    title: "Camera Pro",
-    subtitle: "Ống kính Leica, zoom tiệm cận DSLR",
-    gradient: "from-emerald-500 via-lime-500 to-amber-300",
+    id: "iPad",
+    label: "iPad",
+    icon: "📟",
+    subCategories: [
+      "iPad Pro",
+      "iPad Air",
+      "iPad Gen",
+      "iPad Mini",
+    ],
   },
   {
-    title: "Pin trâu 3 ngày",
-    subtitle: "6000mAh + sạc nhanh 120W",
-    gradient: "from-purple-600 via-slate-700 to-black",
+    id: "Mac",
+    label: "Mac & MacBook",
+    icon: "💻",
+    subCategories: [
+      "MacBook Pro",
+      "MacBook Air",
+      "iMac & Mac Mini",
+    ],
   },
   {
-    title: "Selfie & Vlog",
-    subtitle: "Oppo Find N3, Vivo V series, bộ kit dành cho Gen Z",
-    gradient: "from-pink-500 via-orange-400 to-yellow-300",
+    id: "Apple Watch",
+    label: "Apple Watch",
+    icon: "⌚",
+    subCategories: [
+      "Apple Watch Ultra",
+      "Apple Watch Series",
+      "Apple Watch SE",
+    ],
   },
   {
-    title: "Giá mềm",
-    subtitle: "Honor X, Redmi series dưới 8 triệu",
-    gradient: "from-slate-900 via-slate-700 to-slate-500",
+    id: "Phụ kiện",
+    label: "Phụ kiện Apple",
+    icon: "🎧",
+    subCategories: [
+      "Tai nghe & AirPods",
+      "Củ sạc & Cáp sạc",
+      "Ốp lưng & Bao da",
+      "Apple Pencil & Bàn phím",
+    ],
   },
 ];
 
@@ -99,15 +122,6 @@ const EXPERIENCE_FEATURES = [
     pill: "Care+",
   },
 ];
-
-const slugify = (value = "") =>
-  value
-    .toString()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
 
 const sortProducts = (products, option) => {
   const list = [...products];
@@ -213,10 +227,8 @@ const PublicHome = () => {
   const [bannerSlides, setBannerSlides] = useState([normalizeBanner(null)]);
   const [searchInput, setSearchInput] = useState(storeFilters.search || "");
   const [sortOption, setSortOption] = useState("popular");
-  const [homeCategories, setHomeCategories] = useState(PRODUCT_CATEGORIES);
-  const [brandOptions, setBrandOptions] = useState(FALLBACK_BRANDS);
-  const [activeStyleId, setActiveStyleId] = useState(null);
-  const [styleFilterEnabled, setStyleFilterEnabled] = useState(false);
+  const [selectedSubCategory, setSelectedSubCategory] = useState("");
+  const [categoriesList, setCategoriesList] = useState(APPLE_FULL_CATALOG);
   const currentPage = storeFilters.page || 1;
   const totalPages = pagination?.totalPages || 1;
   const displayPage = Math.min(currentPage, totalPages);
@@ -247,11 +259,8 @@ const PublicHome = () => {
 
     const loadBanner = async () => {
       try {
-        const response = await fetch("/api/banners");
-        if (!response.ok) {
-          throw new Error("Không thể tải banner");
-        }
-        const data = await response.json();
+        const response = await apiClient.get("/banners");
+        const data = response.data;
         if (!active) return;
 
         const banners = Array.isArray(data?.data) ? data.data : [];
@@ -282,14 +291,21 @@ const PublicHome = () => {
     let active = true;
     const loadCategories = async () => {
       try {
-        const response = await fetchHomeCategories();
-        const payload = Array.isArray(response.data?.data)
-          ? response.data.data
-          : [];
-        if (!active || !payload.length) return;
-        setHomeCategories(payload);
+        const res = await fetchPublicCategories();
+        if (active && Array.isArray(res.data?.data) && res.data.data.length > 0) {
+          const dynamic = [
+            { id: "", label: "Tất cả sản phẩm", icon: "🍎", subCategories: [] },
+            ...res.data.data.map((c) => ({
+              id: c.name,
+              label: c.name,
+              icon: c.icon || "🍎",
+              subCategories: c.subCategories || [],
+            })),
+          ];
+          setCategoriesList(dynamic);
+        }
       } catch {
-        // fallback to defaults
+        // keep fallback
       }
     };
     loadCategories();
@@ -298,142 +314,13 @@ const PublicHome = () => {
     };
   }, []);
 
-  useEffect(() => {
-    let active = true;
-    const loadBrands = async () => {
-      try {
-        const response = await fetchBrands();
-        const payload = Array.isArray(response.data?.data)
-          ? response.data.data
-          : [];
-        if (!active || !payload.length) return;
-        setBrandOptions(
-          payload.map((brand) => ({
-            name: brand.name || "",
-            slug: brand.slug || "",
-            logoUrl: brand.logoUrl || "",
-            order: brand.order ?? 0,
-          }))
-        );
-      } catch {
-        // fallback to defaults
-      }
-    };
-    loadBrands();
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  const productLookup = useMemo(() => {
-    const map = new Map();
-    items.forEach((product) => {
-      if (product?.slug) {
-        map.set(product.slug, product);
-      }
-    });
-    return map;
-  }, [items]);
-
-  const activeStyle = useMemo(() => {
-    if (!activeStyleId) return null;
-    return (
-      homeCategories.find(
-        (category) => (category._id || category.title) === activeStyleId
-      ) || null
-    );
-  }, [activeStyleId, homeCategories]);
-
-  const activeStyleProducts = useMemo(() => {
-    if (!activeStyle) return [];
-    if (
-      Array.isArray(activeStyle.linkedProducts) &&
-      activeStyle.linkedProducts.length
-    ) {
-      return activeStyle.linkedProducts;
-    }
-    const slugCandidates = Array.isArray(activeStyle.productSlugs)
-      ? activeStyle.productSlugs
-      : activeStyle.productSlug
-      ? [activeStyle.productSlug]
-      : [];
-    if (!slugCandidates.length) {
-      return [];
-    }
-    return slugCandidates
-      .map((slug) => productLookup.get(slug))
-      .filter(Boolean);
-  }, [activeStyle, productLookup]);
-
-  const scrollToStyleSection = () => {
-    const target = document.getElementById("shopping-style-products");
-    if (target) {
-      target.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-  };
-
-  const buildCategoryPath = (category) => {
-    if (!category) return "";
-    const identifier = category._id || slugify(category.title || "");
-    return identifier ? `/category/${identifier}` : "";
-  };
-
-  const handleOpenCategoryPage = (category) => {
-    const path = buildCategoryPath(category);
-    if (!path) return;
-    navigate(path);
-  };
-
-  const handleShoppingStyleSelect = (category) => {
-    if (!category) return;
-    const identifier = category._id || category.title;
-    setActiveStyleId(identifier);
-
-    const hasAssignedProducts =
-      (Array.isArray(category.linkedProducts) &&
-        category.linkedProducts.length > 0) ||
-      (Array.isArray(category.productSlugs) &&
-        category.productSlugs.length > 0) ||
-      Boolean(category.productSlug);
-
-    if (hasAssignedProducts) {
-      setStyleFilterEnabled(true);
-      scrollToStyleSection();
-      return;
-    }
-
-    setStyleFilterEnabled(false);
-    const keyword = category.searchKeyword || category.title;
-    if (keyword) {
-      dispatch(setFilters({ search: keyword }));
-      document
-        .getElementById("product-grid")
-        ?.scrollIntoView({ behavior: "smooth" });
-    }
-  };
-
   const handleSearchSubmit = (event) => {
     event.preventDefault();
     dispatch(setFilters({ search: searchInput.trim() }));
   };
 
-  const handleBrandClick = (brand) => {
-    const filterKey = brand?.filterKey || "";
-    if (!filterKey) {
-      return;
-    }
-    const nextBrand = storeFilters.brand === filterKey ? "" : filterKey;
-    dispatch(setFilters({ brand: nextBrand }));
-  };
-
   const handleSortChange = (event) => {
     setSortOption(event.target.value);
-  };
-
-  const handleClearStyleFilter = () => {
-    setStyleFilterEnabled(false);
-    setActiveStyleId(null);
-    document.getElementById("product-grid")?.scrollIntoView({ behavior: "smooth" });
   };
 
   const handlePageChange = (pageNumber) => {
@@ -447,75 +334,96 @@ const PublicHome = () => {
       ?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
+  const activeCatalogItem = useMemo(() => {
+    return (
+      categoriesList.find(
+        (cat) => cat.id.toLowerCase() === (storeFilters.category || "").toLowerCase()
+      ) || categoriesList[0] || APPLE_FULL_CATALOG[0]
+    );
+  }, [categoriesList, storeFilters.category]);
+
   const filteredProducts = useMemo(() => {
     const keyword = normalizeText(storeFilters.search || "");
-    const brandFilter = storeFilters.brand?.toLowerCase() || "";
+    const categoryFilter = (storeFilters.category || "").toLowerCase();
+    const subCatFilter = (selectedSubCategory || "").toLowerCase();
     return items.filter((product) => {
-      const matchesBrand =
-        !brandFilter || slugify(product.brand || "") === brandFilter;
+      const matchesCategory =
+        !categoryFilter ||
+        (product.category || "").toLowerCase().includes(categoryFilter);
+      const matchesSubCategory =
+        !subCatFilter ||
+        (product.subCategory || "").toLowerCase().includes(subCatFilter);
       const matchesKeyword = matchesSearchKeyword(product, keyword);
-      return matchesBrand && matchesKeyword;
+      return matchesCategory && matchesSubCategory && matchesKeyword;
     });
-  }, [items, storeFilters.brand, storeFilters.search]);
+  }, [items, storeFilters.category, selectedSubCategory, storeFilters.search]);
 
   const sortedProducts = useMemo(
     () => sortProducts(filteredProducts, sortOption),
     [filteredProducts, sortOption]
   );
 
-  const gridProducts = useMemo(
-    () =>
-      styleFilterEnabled && activeStyleProducts.length
-        ? activeStyleProducts
-        : sortedProducts,
-    [styleFilterEnabled, activeStyleProducts, sortedProducts]
-  );
+  const [spotlightConfig, setSpotlightConfig] = useState(null);
 
-  const featuredProduct = gridProducts[0] || null;
-  const featuredImage = featuredProduct
-    ? getProductImage(
-        featuredProduct,
-        "https://placehold.co/600x400?text=Featured+Product"
-      )
-    : null;
-  const featuredPrices = useMemo(
-    () => resolveProductPrices(featuredProduct),
-    [featuredProduct]
-  );
+  useEffect(() => {
+    apiClient
+      .get("/spotlight")
+      .then((res) => {
+        if (res.data?.data) {
+          setSpotlightConfig(res.data.data);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const gridProducts = useMemo(() => sortedProducts, [sortedProducts]);
+
+  const isSpotlightActive = spotlightConfig ? spotlightConfig.isActive !== false : true;
+
+  const targetFeaturedProduct = useMemo(() => {
+    if (spotlightConfig?.product && typeof spotlightConfig.product === "object") {
+      return spotlightConfig.product;
+    }
+    const fromGrid = gridProducts.find((p) => p.featured) || gridProducts[0] || null;
+    return fromGrid;
+  }, [spotlightConfig, gridProducts]);
+
+  const targetFeaturedImage = useMemo(() => {
+    if (spotlightConfig?.customImage) {
+      return getAssetUrl(spotlightConfig.customImage);
+    }
+    return targetFeaturedProduct
+      ? getProductImage(
+          targetFeaturedProduct,
+          "https://placehold.co/600x400?text=Featured+Product"
+        )
+      : null;
+  }, [spotlightConfig, targetFeaturedProduct]);
+
+  const targetFeaturedPrices = useMemo(() => {
+    if (spotlightConfig?.customPrice) {
+      return {
+        finalPrice: spotlightConfig.customPrice,
+        originalPrice: spotlightConfig.customOldPrice || null,
+      };
+    }
+    return resolveProductPrices(targetFeaturedProduct);
+  }, [spotlightConfig, targetFeaturedProduct]);
+
+  const targetFeaturedBadge = spotlightConfig?.badge || "Sản phẩm nổi bật";
+  const targetFeaturedTitle = spotlightConfig?.title || targetFeaturedProduct?.name || "";
+  const targetFeaturedDesc =
+    spotlightConfig?.description ||
+    targetFeaturedProduct?.shortDescription ||
+    "Sở hữu ngay flagship mới nhất với ưu đãi đặc quyền và bảo hành chu đáo tại Ngọc Triết Store.";
 
   const isLoading = status === "loading";
-  const gridIsLoading = !styleFilterEnabled && isLoading;
-  const showPagination = !styleFilterEnabled && totalPages > 1;
-
-  const brandList = useMemo(() => {
-    const sourceBrands = brandOptions.length ? brandOptions : FALLBACK_BRANDS;
-    return sourceBrands
-      .map((brand, index) => {
-        const label = (brand.name || brand.slug || "").trim();
-        if (!label) {
-          return null;
-        }
-        const filterKey = (brand.slug || slugify(label)).toLowerCase();
-        return {
-          id: brand._id || filterKey,
-          name: label,
-          slug: brand.slug || slugify(label),
-          logoUrl: brand.logoUrl || "",
-          order: brand.order ?? index,
-          filterKey,
-        };
-      })
-      .filter(Boolean)
-      .sort(
-        (a, b) => (a.order ?? 0) - (b.order ?? 0) || a.name.localeCompare(b.name)
-      );
-  }, [brandOptions]);
-
-  const activeBrand = (storeFilters.brand || "").toLowerCase();
+  const gridIsLoading = isLoading;
+  const showPagination = totalPages > 1;
 
   return (
     <>
-      <div className="relative pb-24">
+      <div className="relative pb-20 sm:pb-28">
         <div className="absolute inset-0 -z-10 bg-white/30" aria-hidden="true" />
         <div className="container-safe space-y-12 py-10">
           <Banner
@@ -542,8 +450,7 @@ const PublicHome = () => {
               key={feature.title}
               className={`motion-card motion-delay-${(featureIndex % 4) + 1} rounded-3xl border border-white/60 bg-white/90 p-6 shadow-card backdrop-blur motion-hover-float`}
             >
-              <span className="pill-badge bg-white/70 text-slate-500">{feature.pill}</span>
-              <h3 className="mt-3 text-xl font-semibold text-slate-900">
+              <h3 className="text-xl font-semibold text-slate-900">
                 {feature.title}
               </h3>
               <p className="mt-2 text-sm text-slate-500">{feature.subtitle}</p>
@@ -561,7 +468,7 @@ const PublicHome = () => {
                 type="search"
                 value={searchInput}
                 onChange={(event) => setSearchInput(event.target.value)}
-                placeholder="Tìm iPhone 15 Pro Max, Samsung S24 Ultra..."
+                placeholder="Tìm kiếm iPhone 16 Pro, MacBook, iPad, Apple Watch, AirPods..."
                 className="w-full border-none text-sm text-slate-700 outline-none"
               />
               <button
@@ -589,106 +496,136 @@ const PublicHome = () => {
             </div>
           </div>
 
-          <div className="mt-6 flex flex-wrap gap-3">
-            {brandList.map((brand, brandIndex) => {
-              const label = brand?.name || brand?.slug || "";
-              if (!label) return null;
-              const isActive = activeBrand === brand.filterKey;
+          <div className="mt-6 flex flex-wrap gap-2.5">
+            {categoriesList.map((cat, idx) => {
+              const isActive = (storeFilters.category || "").toLowerCase() === cat.id.toLowerCase();
               return (
                 <button
-                  key={brand.id || brand.slug || brand.name || brandIndex}
+                  key={cat.id || "all"}
                   type="button"
-                  onClick={() => handleBrandClick(brand)}
-                  className={`motion-chip motion-delay-${(brandIndex % 6) + 1} flex items-center gap-2 rounded-full border px-5 py-2 text-sm font-semibold transition duration-200 hover:-translate-y-0.5 ${
+                  onClick={() => {
+                    dispatch(setFilters({ category: cat.id, page: 1 }));
+                    setSelectedSubCategory("");
+                  }}
+                  className={`motion-chip motion-delay-${(idx % 6) + 1} flex items-center gap-2 rounded-full border px-4 sm:px-5 py-2 text-xs sm:text-sm font-semibold transition duration-200 hover:-translate-y-0.5 ${
                     isActive
-                      ? "border-transparent bg-brand-primary text-white shadow-halo"
-                      : "border-slate-200 bg-white text-slate-600 hover:border-brand-primary hover:text-brand-primary"
+                      ? "border-transparent bg-slate-950 text-white shadow-lg"
+                      : "border-slate-200 bg-white text-slate-700 hover:border-slate-400 hover:text-slate-900"
                   }`}
                 >
-                  {brand.logoUrl ? (
-                    <span className="flex h-5 w-5 items-center justify-center overflow-hidden rounded-full bg-white/40">
-                      <img
-                        src={brand.logoUrl}
-                        alt={label}
-                        className="h-full w-full object-contain"
-                        loading="lazy"
-                      />
-                    </span>
-                  ) : null}
-                  {label}
+                  <span className="text-base">{cat.icon}</span>
+                  <span>{cat.label}</span>
                 </button>
               );
             })}
-            {storeFilters.brand && (
+          </div>
+
+          {activeCatalogItem?.subCategories?.length > 0 && (
+            <div className="mt-4 pt-4 border-t border-slate-100 flex flex-wrap items-center gap-2">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-500 mr-1">
+                Phân loại {activeCatalogItem.label}:
+              </span>
               <button
                 type="button"
-                onClick={() => dispatch(setFilters({ brand: "" }))}
-                className="motion-chip rounded-full border border-slate-200 px-4 py-2 text-sm text-slate-500 transition duration-200 hover:-translate-y-0.5 hover:border-brand-primary hover:text-brand-primary"
+                onClick={() => setSelectedSubCategory("")}
+                className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition duration-200 ${
+                  !selectedSubCategory
+                    ? "bg-blue-600 text-white shadow-sm"
+                    : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                }`}
               >
-                Xóa lọc
+                Tất cả {activeCatalogItem.label}
               </button>
-            )}
-          </div>
+              {activeCatalogItem.subCategories.map((sub) => {
+                const isSubActive = selectedSubCategory === sub;
+                return (
+                  <button
+                    key={sub}
+                    type="button"
+                    onClick={() => setSelectedSubCategory(isSubActive ? "" : sub)}
+                    className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition duration-200 ${
+                      isSubActive
+                        ? "bg-blue-600 text-white shadow-sm"
+                        : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                    }`}
+                  >
+                    {sub}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </section>
 
-        {featuredProduct && (
+        {isSpotlightActive && targetFeaturedProduct && (
           <section className="motion-panel grid gap-6">
-            <div className="relative overflow-hidden rounded-[30px] border border-white/50 bg-gradient-to-br from-brand-primary via-rose-500 to-brand-dark p-6 text-white shadow-glass">
-              <div className="absolute inset-0 opacity-40">
+            <div className="relative overflow-hidden rounded-[28px] border border-slate-800 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-6 sm:p-8 text-white shadow-xl">
+              <div className="absolute inset-0 opacity-25">
                 <img
-                  src={featuredImage}
-                  alt={featuredProduct.name}
+                  src={targetFeaturedImage}
+                  alt={targetFeaturedTitle}
                   className="h-full w-full object-cover mix-blend-overlay"
                   loading="lazy"
                 />
               </div>
-              <div className="relative z-10 flex flex-col justify-between gap-4 lg:flex-row">
-                <div className="space-y-4">
-                  <span className="pill-badge bg-white/10 text-white">
-                    Hot pick
+              <div className="relative z-10 flex flex-col justify-between gap-6 lg:flex-row lg:items-center">
+                <div className="space-y-4 max-w-xl">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-500/20 border border-blue-400/30 px-3 py-1 text-xs font-bold uppercase tracking-wider text-blue-300">
+                    <span className="h-1.5 w-1.5 rounded-full bg-blue-400 animate-ping" />
+                    {targetFeaturedBadge}
                   </span>
-                  <h3 className="text-3xl font-semibold leading-tight">
-                    {featuredProduct.name}
+                  <h3 className="text-2xl sm:text-3xl font-extrabold leading-tight text-white tracking-tight">
+                    {targetFeaturedTitle}
                   </h3>
-                  <p className="text-sm text-white/80">
-                    {featuredProduct.shortDescription ||
-                      "Sở hữu ngay flagship mới nhất với ưu đãi đặc quyền và giao trong 2 giờ."}
+                  <p className="text-sm text-slate-300 leading-relaxed">
+                    {targetFeaturedDesc}
                   </p>
-                  <div className="flex items-center gap-4">
-                    <span className="text-4xl font-bold">
-                      {formatCurrency(featuredPrices.finalPrice)}
+                  <div className="flex flex-wrap items-baseline gap-3">
+                    <span className="text-3xl font-extrabold text-blue-400">
+                      {formatCurrency(targetFeaturedPrices.finalPrice)}
                     </span>
-                    {featuredPrices.originalPrice ? (
-                      <span className="text-sm text-white/60 line-through">
-                        {formatCurrency(featuredPrices.originalPrice)}
+                    {targetFeaturedPrices.originalPrice && targetFeaturedPrices.originalPrice > targetFeaturedPrices.finalPrice ? (
+                      <span className="text-sm text-slate-400 line-through">
+                        {formatCurrency(targetFeaturedPrices.originalPrice)}
                       </span>
                     ) : null}
                   </div>
-                  <div className="flex flex-wrap gap-3">
+                  <div className="flex flex-wrap gap-3 pt-2">
                     <button
                       type="button"
-                      onClick={() => navigate(`/product/${featuredProduct.slug}`)}
-                      className="banner-cta inline-flex items-center rounded-full bg-white px-6 py-3 text-sm font-semibold text-brand-primary shadow-lg transition hover:-translate-y-0.5 hover:bg-brand-light hover:text-white"
+                      onClick={() => {
+                        if (spotlightConfig?.link) {
+                          if (/^https?:\/\//i.test(spotlightConfig.link)) {
+                            window.location.href = spotlightConfig.link;
+                          } else {
+                            navigate(spotlightConfig.link);
+                          }
+                        } else if (targetFeaturedProduct?.slug) {
+                          navigate(`/product/${targetFeaturedProduct.slug}`);
+                        } else {
+                          navigate("/products");
+                        }
+                      }}
+                      className="rounded-xl bg-blue-600 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-blue-600/30 transition hover:bg-blue-500"
                     >
                       Xem chi tiết
                     </button>
                     <button
                       type="button"
-                      onClick={() => navigate("/checkout")}
-                      className="rounded-full border border-white/40 px-6 py-3 text-sm font-semibold text-white/90 transition hover:-translate-y-0.5 hover:bg-white/10"
+                      onClick={() => navigate("/products")}
+                      className="rounded-xl border border-white/20 bg-white/10 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/20"
                     >
-                      Mua ngay
+                      Khám phá thêm
                     </button>
                   </div>
                 </div>
-                {featuredImage ? (
-                  <div className="relative mt-6 flex w-full items-center justify-center lg:mt-0">
-                    <div className="motion-hover-float relative">
-                      <span className="absolute inset-0 -z-10 rounded-[32px] bg-white/20 blur-3xl" />
+                {targetFeaturedImage ? (
+                  <div className="relative mt-6 flex w-full items-center justify-center lg:mt-0 lg:w-auto">
+                    <div className="relative p-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md shadow-2xl">
                       <img
-                        src={featuredImage}
-                        alt={featuredProduct.name}
-                        className="h-64 w-64 object-contain drop-shadow-2xl"
+                        src={targetFeaturedImage}
+                        alt={targetFeaturedTitle}
+                        className="h-56 w-56 sm:h-64 sm:w-64 object-contain drop-shadow-2xl transition duration-500 hover:scale-105"
                         loading="lazy"
                       />
                     </div>
@@ -699,192 +636,52 @@ const PublicHome = () => {
           </section>
         )}
 
-        <section className="motion-panel mt-8">
-          <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <p className="text-xs uppercase tracking-[0.3em] text-brand-primary">
-                Danh mục đề xuất
-              </p>
-              <h2 className="text-3xl font-semibold text-slate-900">
-                Chọn phong cách của bạn
+
+        <section id="product-grid">
+          <div className="motion-panel flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-xl sm:text-2xl font-bold text-slate-900">
+                {storeFilters.category ? storeFilters.category : "Tất cả sản phẩm Apple"}
               </h2>
-            </div>
-            <p className="text-sm text-slate-500">
-              Cá nhân hóa theo nhu cầu: camera, gaming, flagship hay giá tốt.
-            </p>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {(homeCategories.length ? homeCategories : PRODUCT_CATEGORIES).map(
-              (category, categoryIndex) => {
-                const styleId = category._id || category.title;
-                const isActiveStyle = styleFilterEnabled && activeStyleId === styleId;
-                const categoryProducts = Array.isArray(
-                  category.linkedProducts
-                )
-                  ? category.linkedProducts.slice(0, 3)
-                  : [];
-
-                return (
-                  <div
-                    key={category._id || category.title}
-                    className={`motion-card motion-delay-${
-                      (categoryIndex % 6) + 1
-                    } rounded-3xl border ${
-                      isActiveStyle
-                        ? "border-white shadow-glass"
-                        : "border-white/40"
-                    } bg-gradient-to-br ${category.gradient} p-5 text-white shadow-lg motion-hover-float`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs uppercase tracking-[0.4em] text-white/70">
-                        #{categoryIndex + 1}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => handleOpenCategoryPage(category)}
-                        className="rounded-full border border-white/40 px-4 py-1 text-xs font-semibold text-white/80 transition hover:-translate-y-0.5 hover:bg-white/10"
-                      >
-                        Xem danh mục
-                      </button>
-                    </div>
-                    <h3 className="mt-4 text-2xl font-semibold">{category.title}</h3>
-                    <p className="mt-2 text-sm text-white/90">{category.subtitle}</p>
-                    {categoryProducts.length ? (
-                      <div className="mt-4 flex gap-3 overflow-x-auto pb-1">
-                        {categoryProducts.map((product) => {
-                          const productKey = product._id || product.slug;
-                          const imageSrc = getProductImage(
-                            product,
-                            "https://placehold.co/80x80?text=No+Img"
-                          );
-                          const priceInfo = resolveProductPrices(product);
-                          const finalPriceLabel = formatCurrency(
-                            priceInfo.finalPrice
-                          );
-                          const originalPriceLabel = priceInfo.originalPrice
-                            ? formatCurrency(priceInfo.originalPrice)
-                            : null;
-                          return (
-                            <button
-                              type="button"
-                              key={productKey}
-                              onClick={() => navigate(`/product/${product.slug}`)}
-                              className="group flex min-w-[170px] flex-1 items-center gap-3 rounded-2xl border border-white/25 bg-white/10 px-3 py-2 text-left text-white/90 transition hover:-translate-y-0.5 hover:bg-white/20"
-                            >
-                              <div className="h-12 w-12 overflow-hidden rounded-xl bg-white/20">
-                                <img
-                                  src={imageSrc}
-                                  alt={product.name}
-                                  className="h-full w-full object-cover"
-                                  loading="lazy"
-                                />
-                              </div>
-                              <div className="flex-1">
-                                <p className="text-sm font-semibold leading-tight line-clamp-2">
-                                  {product.name}
-                                </p>
-                                <p className="text-[11px] text-white/70">
-                                  {finalPriceLabel}
-                                  {originalPriceLabel ? (
-                                    <span className="ml-2 text-white/60 line-through">
-                                      {originalPriceLabel}
-                                    </span>
-                                  ) : null}
-                                </p>
-                              </div>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    ) : null}
-                  </div>
-                );
-              }
-            )}
-          </div>
-        </section>
-
-        <section id="shopping-style-products" className="motion-panel mt-10">
-          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-            <div>
-
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {homeCategories.map((category) => {
-                const identifier = category._id || category.title;
-                const isActive = identifier === activeStyleId;
-                return (
-                  <button
-                    key={identifier}
-                    type="button"
-                    onClick={() => handleShoppingStyleSelect(category)}
-                    className={`rounded-full border px-4 py-2 text-sm font-semibold transition hover:-translate-y-0.5 ${
-                      isActive
-                        ? "border-brand-primary bg-brand-primary/10 text-brand-primary"
-                        : "border-slate-200 bg-white text-slate-600 hover:border-brand-primary hover:text-brand-primary"
-                    }`}
-                  >
-                    {category.title}
-                  </button>
-                );
-              })}
-              {styleFilterEnabled ? (
+              {selectedSubCategory && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-600 border border-blue-200">
+                  › {selectedSubCategory}
+                </span>
+              )}
+              {(storeFilters.category || selectedSubCategory || storeFilters.search) && (
                 <button
                   type="button"
-                  onClick={handleClearStyleFilter}
-                  className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:-translate-y-0.5 hover:border-brand-primary hover:text-brand-primary"
+                  onClick={() => {
+                    dispatch(setFilters({ category: "", search: "", page: 1 }));
+                    setSelectedSubCategory("");
+                  }}
+                  className="text-xs font-medium text-rose-500 hover:text-rose-700 hover:underline ml-2"
                 >
-                  Xem tất cả
+                  [Xóa bộ lọc]
                 </button>
-              ) : null}
+              )}
             </div>
-          </div>
-
-          {styleFilterEnabled ? (
-            activeStyleProducts.length ? (
-              <div className="mt-6 grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
-                {activeStyleProducts.map((product, productIndex) => (
-                  <div
-                    key={product._id || product.slug}
-                    className={`motion-card motion-delay-${(productIndex % 6) + 1}`}
-                  >
-                    <ProductCard product={product} />
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="mt-6 rounded-3xl border border-dashed border-slate-200 bg-white p-8 text-center text-sm text-slate-500">
-                Chưa có sản phẩm nào được gắn kèm cho phong cách này. Vui lòng thêm sản phẩm trong trang quản trị hoặc chọn phong cách khác.
-              </div>
-            )
-          ) : null}
-        </section>
-        <section id="product-grid">
-          <div className="motion-panel flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <h2 className="text-2xl font-semibold text-slate-900">
-                Sản phẩm nổi bật
-              </h2>
-              {styleFilterEnabled && activeStyle?.title ? (
-                <p className="text-xs font-semibold text-brand-primary">
-                  Đang hiển thị danh mục: {activeStyle.title}
-                </p>
-              ) : null}
+            <div className="flex items-center gap-4">
+              <span className="text-xs sm:text-sm text-slate-500 font-medium">
+                Hiển thị {gridProducts.length} sản phẩm
+              </span>
+              <Link
+                to="/products"
+                className="text-xs sm:text-sm font-semibold text-blue-600 hover:text-blue-700 hover:underline inline-flex items-center gap-1"
+              >
+                Xem toàn bộ kho hàng →
+              </Link>
             </div>
-            <span className="text-sm text-slate-500">
-              Hiển thị {gridProducts.length} sản phẩm
-            </span>
           </div>
 
           {gridIsLoading ? (
-            <div className="mt-8 grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
-              {Array.from({ length: 6 }).map((_, index) => (
+            <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {Array.from({ length: 8 }).map((_, index) => (
                 <SkeletonCard key={index} />
               ))}
             </div>
           ) : gridProducts.length ? (
-            <div className="mt-8 grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {gridProducts.map((product, productIndex) => (
                 <div
                   key={product._id || product.slug || productIndex}
@@ -957,55 +754,6 @@ const PublicHome = () => {
         </section>
         </div>
       </div>
-      <section className="container-safe pb-16">
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {[
-            {
-              title: "Giao nhanh 2H",
-              desc: "Đặt hàng online, nhận tại nhà hoặc cửa hàng gần nhất.",
-              accent: "from-brand-primary/15 via-brand-light/10 to-white",
-              tag: "Vận chuyển",
-            },
-            {
-              title: "Trả góp linh hoạt",
-              desc: "0% qua thẻ tín dụng/đối tác tài chính, duyệt nhanh.",
-              accent: "from-aurora/15 via-blue-100 to-white",
-              tag: "Thanh toán",
-            },
-            {
-              title: "Bảo hành minh bạch",
-              desc: "Theo dõi trạng thái, đổi mới 30 ngày cho lỗi NSX.",
-              accent: "from-emerald-100 via-white to-white",
-              tag: "Hậu mãi",
-            },
-            {
-              title: "Thu cũ đổi mới",
-              desc: "Định giá nhanh, trừ thẳng vào đơn hàng mới.",
-              accent: "from-amber-100 via-pink-50 to-white",
-              tag: "Nâng cấp",
-            },
-          ].map((item, idx) => (
-            <div
-              key={item.title}
-              className={`motion-card motion-delay-${(idx % 4) + 1} relative overflow-hidden rounded-3xl border border-slate-100 bg-white p-5 shadow-card`}
-            >
-              <div
-                className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${item.accent}`}
-                aria-hidden
-              />
-              <div className="relative space-y-2">
-                <span className="pill-badge bg-slate-100 text-slate-600">{item.tag}</span>
-                <h3 className="text-lg font-semibold text-slate-900">{item.title}</h3>
-                <p className="text-sm text-slate-600">{item.desc}</p>
-                <div className="flex items-center gap-2 text-sm font-semibold text-brand-primary">
-                  Tìm hiểu thêm
-                  <span aria-hidden>→</span>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
     </>
   );
 };

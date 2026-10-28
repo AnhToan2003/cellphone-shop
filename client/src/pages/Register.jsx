@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
+import { FiUser, FiMail, FiLock, FiEye, FiEyeOff } from "react-icons/fi";
 
 import { useAuth } from "../context/AuthContext.jsx";
 import BackButton from "../components/BackButton.jsx";
@@ -15,6 +16,7 @@ const Register = () => {
     email: "",
     password: "",
   });
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -48,7 +50,7 @@ const Register = () => {
 
     try {
       await registerAccount(form);
-      toast.success("Tạo tài khoản thành công.");
+      toast.success("Tạo tài khoản thành công!");
     } catch (err) {
       const message =
         err?.message || "Không thể tạo tài khoản. Vui lòng thử lại.";
@@ -56,123 +58,105 @@ const Register = () => {
     }
   };
 
-  const perks = useMemo(
-    () => [
-      {
-        title: "Đồng bộ mọi thiết bị",
-        detail: "Giỏ hàng, danh sách yêu thích và lịch sử mua sắm tự động cập nhật.",
-      },
-      {
-        title: "Chăm sóc khách hàng ưu tiên",
-        detail: "Kênh hỗ trợ riêng cùng chuyên gia tư vấn 24/7.",
-      },
-      {
-        title: "Ưu đãi thành viên",
-        detail: "Tích điểm đổi voucher và săn các chương trình giới hạn.",
-      },
-    ],
-    []
-  );
+  const isLoading = status === "loading";
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 text-white">
-      <div className="mx-auto w-full max-w-6xl px-4 pb-16 pt-8 sm:px-8">
+    <div className="relative flex min-h-screen items-center justify-center bg-slate-950 px-4 py-12 text-white selection:bg-blue-600 selection:text-white">
+      {/* Background ambient lighting */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute -top-40 left-1/2 h-[500px] w-[500px] -translate-x-1/2 rounded-full bg-blue-600/15 blur-[120px]" />
+        <div className="absolute -bottom-40 left-10 h-[400px] w-[400px] rounded-full bg-slate-800/20 blur-[100px]" />
+      </div>
+
+      {/* Floating Back Button */}
+      <div className="absolute left-6 top-6 z-20">
         <BackButton
           fallback="/"
           variant="dark"
           iconSize={14}
           alwaysVisible
-          className="mb-6 border-white/10 bg-white/5 text-white hover:bg-white/10"
+          className="border-slate-800 bg-slate-900/80 text-slate-300 hover:bg-slate-800 hover:text-white backdrop-blur shadow-lg"
         />
-        <div className="grid gap-10 lg:grid-cols-[1.05fr_0.95fr]">
-          <section className="order-2 space-y-6 lg:order-1">
-            <p className="inline-flex items-center rounded-full border border-white/20 px-4 py-1 text-xs uppercase tracking-[0.25em] text-slate-200">
-              Thành viên Cellphone Shop
-            </p>
-            <div>
-              <h1 className="text-4xl font-semibold leading-tight text-white sm:text-5xl">
-                Tạo tài khoản <span className="text-brand-primary">trong 1 phút</span>
-              </h1>
-              <p className="mt-4 text-base text-slate-300 sm:text-lg">
-                Gia nhập cộng đồng yêu công nghệ để nhận ưu đãi độc quyền và kiểm soát
-                mọi đơn hàng của bạn dễ dàng hơn bao giờ hết.
-              </p>
-            </div>
-            <div className="grid gap-4 rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur sm:grid-cols-2">
-              {perks.map((perk) => (
-                <div
-                  key={perk.title}
-                  className="rounded-2xl border border-white/5 bg-white/5 p-5"
-                >
-                  <p className="text-base font-semibold text-white">
-                    {perk.title}
-                  </p>
-                  <p className="mt-2 text-sm text-slate-300">{perk.detail}</p>
-                </div>
-              ))}
-            </div>
-            <div className="rounded-3xl border border-white/10 bg-white/5 p-6 text-sm text-slate-200 backdrop-blur">
-              <p className="font-semibold text-white">Cam kết an toàn dữ liệu</p>
-              <p className="mt-2">
-                Thông tin cá nhân được mã hóa và tuân thủ nghiêm ngặt các tiêu chuẩn
-                bảo mật. Bạn có thể yêu cầu tải xuống hoặc xóa dữ liệu bất cứ lúc nào.
-              </p>
-            </div>
-          </section>
+      </div>
 
-          <section className="order-1 rounded-3xl border border-white/5 bg-white/95 p-8 text-slate-900 shadow-2xl shadow-brand-primary/20 lg:order-2">
-            <div className="mb-8 space-y-2 text-center">
-              <h2 className="text-2xl font-semibold text-slate-900">
-                Đăng ký tài khoản
-              </h2>
-              <p className="text-sm text-slate-500">
-                Điền thông tin bên dưới để tạo tài khoản mua sắm của bạn.
-              </p>
-            </div>
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <label
-                    htmlFor="name"
-                    className="text-sm font-medium text-slate-600"
-                  >
-                    Họ và tên
-                  </label>
+      {/* Centered Register Card */}
+      <div className="relative z-10 w-full max-w-lg animate-fade-in-up">
+        <div className="rounded-3xl border border-slate-800/80 bg-slate-900/70 p-8 sm:p-10 shadow-2xl backdrop-blur-2xl">
+          {/* Logo & Header */}
+          <div className="flex flex-col items-center text-center">
+            <Link to="/" className="group mb-5 flex flex-col items-center">
+              <div className="relative flex h-16 w-16 items-center justify-center overflow-hidden rounded-full border border-white/20 bg-black p-1 shadow-xl transition-transform duration-300 group-hover:scale-105">
+                <img
+                  src="/logo.jpg"
+                  alt="Ngọc Triết Store"
+                  className="h-full w-full rounded-full object-cover"
+                />
+              </div>
+            </Link>
+
+            <h1 className="text-2xl font-extrabold tracking-tight text-white">
+              Tạo tài khoản mới
+            </h1>
+            <p className="mt-1.5 text-xs text-slate-400">
+              Trở thành thành viên Ngọc Triết Store để nhận đặc quyền bảo hành Apple
+            </p>
+          </div>
+
+          {/* Register Form */}
+          <form onSubmit={handleSubmit} className="mt-8 space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              {/* Họ và tên */}
+              <div className="space-y-1.5">
+                <label htmlFor="name" className="text-xs font-medium text-slate-300">
+                  Họ và tên
+                </label>
+                <div className="relative">
+                  <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
+                    <FiUser size={15} />
+                  </span>
                   <input
                     id="name"
                     name="name"
                     value={form.name}
                     onChange={handleChange}
-                        required
-                    className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
+                    required
                     placeholder="Nguyễn Văn A"
+                    className="w-full rounded-xl border border-slate-700/80 bg-slate-950/80 py-3 pl-10 pr-3 text-sm text-white placeholder-slate-500 outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30"
                   />
                 </div>
-                <div className="space-y-2">
-                  <label
-                    htmlFor="username"
-                    className="text-sm font-medium text-slate-600"
-                  >
-                    Tên đăng nhập
-                  </label>
+              </div>
+
+              {/* Tên đăng nhập */}
+              <div className="space-y-1.5">
+                <label htmlFor="username" className="text-xs font-medium text-slate-300">
+                  Tên đăng nhập
+                </label>
+                <div className="relative">
+                  <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
+                    <span className="text-xs font-bold">@</span>
+                  </span>
                   <input
                     id="username"
                     name="username"
                     value={form.username}
                     onChange={handleChange}
                     required
-                    className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
-                    placeholder="tentaikhoan"
+                    placeholder="username"
+                    className="w-full rounded-xl border border-slate-700/80 bg-slate-950/80 py-3 pl-9 pr-3 text-sm text-white placeholder-slate-500 outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30"
                   />
                 </div>
               </div>
-              <div className="space-y-2">
-                <label
-                  htmlFor="email"
-                  className="text-sm font-medium text-slate-600"
-                >
-                  Email
-                </label>
+            </div>
+
+            {/* Email */}
+            <div className="space-y-1.5">
+              <label htmlFor="email" className="text-xs font-medium text-slate-300">
+                Địa chỉ Email
+              </label>
+              <div className="relative">
+                <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
+                  <FiMail size={16} />
+                </span>
                 <input
                   id="email"
                   name="email"
@@ -180,49 +164,74 @@ const Register = () => {
                   value={form.email}
                   onChange={handleChange}
                   required
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
-                  placeholder="tentaikhoan@gmail.com"
+                  placeholder="name@example.com"
+                  className="w-full rounded-xl border border-slate-700/80 bg-slate-950/80 py-3 pl-10 pr-4 text-sm text-white placeholder-slate-500 outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30"
                 />
               </div>
-              <div className="space-y-2">
-                <label
-                  htmlFor="password"
-                  className="text-sm font-medium text-slate-600"
-                >
-                  Mật khẩu
-                </label>
+            </div>
+
+            {/* Mật khẩu */}
+            <div className="space-y-1.5">
+              <label htmlFor="password" className="text-xs font-medium text-slate-300">
+                Mật khẩu (ít nhất 6 ký tự)
+              </label>
+              <div className="relative">
+                <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
+                  <FiLock size={16} />
+                </span>
                 <input
                   id="password"
                   name="password"
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   value={form.password}
                   onChange={handleChange}
                   required
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
-                  placeholder="Ít nhất 6 ký tự"
+                  placeholder="••••••••"
+                  className="w-full rounded-xl border border-slate-700/80 bg-slate-950/80 py-3 pl-10 pr-11 text-sm text-white placeholder-slate-500 outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-slate-400 hover:text-slate-200 transition"
+                  aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+                >
+                  {showPassword ? <FiEyeOff size={16} /> : <FiEye size={16} />}
+                </button>
               </div>
+            </div>
 
-              <button
-                type="submit"
-                disabled={status === "loading"}
-                className="w-full rounded-full bg-brand-primary px-6 py-3 text-sm font-semibold text-white transition hover:bg-brand-dark disabled:cursor-not-allowed disabled:bg-brand-dark/50"
-              >
-                {status === "loading" ? "Đang tạo tài khoản..." : "Tạo tài khoản"}
-              </button>
-            </form>
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full mt-2 rounded-xl bg-blue-600 py-3.5 text-sm font-bold text-white shadow-lg shadow-blue-600/30 transition duration-200 hover:bg-blue-500 hover:scale-[1.01] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {isLoading ? (
+                <span className="inline-flex items-center justify-center gap-2">
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  Đang tạo tài khoản...
+                </span>
+              ) : (
+                "Đăng ký tài khoản"
+              )}
+            </button>
+          </form>
 
-            <p className="mt-6 text-center text-sm text-slate-500">
-              Bạn đã có tài khoản?{" "}
-              <Link
-                to="/login"
-                className="font-semibold text-brand-primary hover:text-brand-dark"
-              >
-                Đăng nhập ngay
-              </Link>
-            </p>
-          </section>
+          {/* Switch to Login */}
+          <div className="mt-8 border-t border-slate-800/80 pt-6 text-center text-xs text-slate-400">
+            Đã có tài khoản?{" "}
+            <Link
+              to="/login"
+              className="font-bold text-blue-400 hover:text-blue-300 hover:underline transition ml-1"
+            >
+              Đăng nhập ngay
+            </Link>
+          </div>
         </div>
+
+        {/* Footer note */}
+        <p className="mt-6 text-center text-[11px] text-slate-500">
+          © 2026 Ngọc Triết Store. Cam kết bảo mật thông tin tuyệt đối.
+        </p>
       </div>
     </div>
   );

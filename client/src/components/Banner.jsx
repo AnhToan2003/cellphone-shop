@@ -1,23 +1,23 @@
-﻿import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import PropTypes from "prop-types";
 
 import { getAssetUrl } from "../utils/assets.js";
 
 const FALLBACK_SLIDE = {
   id: "fallback",
-  title: "Chào mừng đến Cellphone Shop",
+  title: "Ngọc Triết Store – Chuyên Thiết Bị Apple",
   subtitle:
-    "Khám phá smartphone cao cấp, giao nhanh toàn quốc và nhiều chương trình ưu đãi độc quyền.",
+    "Trải nghiệm hệ sinh thái Apple đỉnh cao: iPhone, iPad, MacBook, Apple Watch và phụ kiện chính hãng.",
   imageUrl:
     "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=1400&q=80",
-  link: "",
-  ctaLabel: "Xem sản phẩm",
+  link: "/products",
+  ctaLabel: "Khám phá ngay",
 };
 
 const HIGHLIGHT_STATS = [
-  { label: "Flagship hot", value: "50+" },
-  { label: "Flash sale", value: "12h/lần" },
-  { label: "Ưu đãi", value: "Độc quyền" },
+  { label: "Tiêu chuẩn", value: "Apple VN" },
+  { label: "Chất lượng", value: "100% Zin" },
+  { label: "Bảo hành", value: "1 Đổi 1" },
 ];
 
 
@@ -65,7 +65,7 @@ const Banner = ({ slides, autoPlay = true, interval = 6000, onSlideNavigate }) =
   }, [autoPlay, interval, preparedSlides.length]);
 
   const goTo = (nextIndex) => {
-    setIndex((prev) => {
+    setIndex(() => {
       if (nextIndex < 0) {
         return preparedSlides.length - 1;
       }
@@ -87,26 +87,20 @@ const Banner = ({ slides, autoPlay = true, interval = 6000, onSlideNavigate }) =
   const resolvedImage = getAssetUrl(currentSlide.imageUrl);
 
   return (
-    <section className="relative overflow-hidden rounded-[36px] border border-white/40 bg-gradient-to-br from-brand-primary via-rose-500 to-brand-dark text-white shadow-glass">
+    <section className="relative overflow-hidden rounded-[32px] border border-slate-800 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white shadow-2xl">
       <div className="banner-pan absolute inset-0">
         <img
           src={resolvedImage}
           alt={currentSlide.title}
           className="h-full w-full object-cover opacity-50 mix-blend-overlay"
+          fetchPriority="high"
+          decoding="async"
         />
         <div className="absolute inset-0 bg-gradient-to-r from-slate-900/90 via-slate-900/40 to-transparent" />
       </div>
 
       <div className="relative grid gap-10 p-8 lg:grid-cols-[1.1fr,0.9fr] lg:gap-12 lg:p-12">
         <div className="flex flex-col justify-center space-y-6">
-          <div className="pill-badge w-fit bg-white/15 text-white banner-pill">
-            <span className="tracking-[0.4em]">Focus</span>
-            {preparedSlides.length > 1 && (
-              <span>
-                {index + 1}/{preparedSlides.length}
-              </span>
-            )}
-          </div>
           <h1 className="banner-title font-display text-3xl font-semibold leading-tight text-white sm:text-4xl lg:text-5xl">
             {currentSlide.title}
           </h1>
@@ -138,14 +132,6 @@ const Banner = ({ slides, autoPlay = true, interval = 6000, onSlideNavigate }) =
               >
                 {currentSlide.ctaLabel}
               </button>
-              {preparedSlides.length > 1 && (
-                <div className="flex items-center gap-3 rounded-full border border-white/30 px-4 py-2 text-xs uppercase tracking-[0.4em]">
-                  Slide
-                  <span className="text-base font-semibold text-white">
-                    {index + 1}
-                  </span>
-                </div>
-              )}
             </div>
           ) : null}
         </div>
@@ -158,33 +144,16 @@ const Banner = ({ slides, autoPlay = true, interval = 6000, onSlideNavigate }) =
                 src={resolvedImage}
                 alt={currentSlide.title}
                 className="h-full w-full object-contain drop-shadow-glow"
+                fetchPriority="high"
+                decoding="async"
               />
             </div>
             <p className="mt-4 text-sm text-white/80">
-              Quét mã QR để nhận voucher độc quyền và giao nhanh trong 2 giờ.
+              Khám phá ưu đãi độc quyền và giao nhanh toàn quốc.
             </p>
           </div>
 
-          {preparedSlides.length > 1 && (
-            <div className="absolute -bottom-4 hidden w-max items-center gap-3 rounded-full border border-white/40 bg-white/10 px-4 py-2 text-xs backdrop-blur sm:flex">
-              <button
-                type="button"
-                onClick={() => goTo(index - 1)}
-                className="rounded-full border border-white/40 px-3 py-1 text-white transition hover:bg-white/20"
-                aria-label="Slide trước"
-              >
-                Prev
-              </button>
-              <button
-                type="button"
-                onClick={() => goTo(index + 1)}
-                className="rounded-full border border-white/40 px-3 py-1 text-white transition hover:bg-white/20"
-                aria-label="Slide tiếp theo"
-              >
-                Next
-              </button>
-            </div>
-          )}
+
         </div>
       </div>
 

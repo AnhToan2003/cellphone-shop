@@ -1,5 +1,6 @@
 import { Outlet, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
+import { Toaster } from "react-hot-toast";
 
 import {
   AuthNavigationHandler,
@@ -18,6 +19,7 @@ const AdminLayout = () => {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans">
+      <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
       <AuthNavigationHandler />
       <AdminHeader onToggleSidebar={() => setIsSidebarOpen(true)} />
       <div className="flex pt-16">
@@ -25,14 +27,14 @@ const AdminLayout = () => {
           isOpen={isSidebarOpen}
           onClose={() => setIsSidebarOpen(false)}
         />
-        <main className="flex-1 px-4 pt-12 pb-10 lg:ml-60 lg:px-10">
+        <main className="min-w-0 flex-1 px-4 pt-12 pb-10 lg:ml-60 lg:px-10">
           <BackButton
             fallback="/admin"
             variant="dark"
             wrapperClassName="mb-6"
             className="border-slate-800 bg-slate-900/70 text-slate-100"
           />
-          <div className="mx-auto max-w-6xl space-y-8 pb-10">
+          <div className="mx-auto min-w-0 max-w-6xl space-y-8 pb-10">
             <Outlet />
           </div>
         </main>

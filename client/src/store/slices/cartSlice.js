@@ -49,6 +49,10 @@ const cartSlice = createSlice({
     addItem(state, action) {
       const payload = action.payload;
       const qty = payload.quantity || 1;
+      const availableStock = Number.isFinite(Number(payload.availableStock))
+        ? Math.max(0, Math.floor(Number(payload.availableStock)))
+        : 99;
+      if (availableStock < 1) return;
       const variantKeyParts = [
         payload.id,
         payload.selectedColor || "",
@@ -59,7 +63,8 @@ const cartSlice = createSlice({
       const existing = state.items.find((item) => item.id === cartId);
 
       if (existing) {
-        existing.quantity = Math.min(existing.quantity + qty, 99);
+        existing.availableStock = availableStock;
+        existing.quantity = Math.min(existing.quantity + qty, availableStock, 99);
       } else {
         state.items.push({
           id: cartId,
@@ -69,6 +74,7 @@ const cartSlice = createSlice({
           price: payload.price,
           image: payload.image || "",
           quantity: Math.min(qty, 99),
+          availableStock,
           color: payload.selectedColor || null,
           capacity: payload.selectedCapacity || null,
         });
@@ -84,7 +90,10 @@ const cartSlice = createSlice({
       if (!item) {
         return;
       }
-      item.quantity = Math.min(item.quantity + 1, 99);
+      const maxQuantity = Number.isFinite(Number(item.availableStock))
+        ? Math.max(0, Math.floor(Number(item.availableStock)))
+        : 99;
+      item.quantity = Math.min(item.quantity + 1, maxQuantity, 99);
 
       const totals = calculateTotals(state.items);
       state.totalQuantity = totals.totalQuantity;

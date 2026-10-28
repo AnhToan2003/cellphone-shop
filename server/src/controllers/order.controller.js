@@ -1,4 +1,4 @@
-﻿import dayjs from "dayjs";
+import dayjs from "dayjs";
 import { z } from "zod";
 
 import { Order } from "../models/Order.js";
@@ -8,16 +8,12 @@ import { Review } from "../models/Review.js";
 import {
   loadActivePromotions,
   resolveEffectivePricing,
+  findVariantForSelection,
 } from "../utils/pricing.js";
 import {
   adjustUserLifetimeSpend,
   restockOrderInventory,
 } from "../services/order.service.js";
-import {
-  buildTransferContent,
-  buildVietqrImageUrl,
-  generateVietqrReference,
-} from "../services/vietqr.service.js";
 
 const orderSchema = z.object({
   items: z
@@ -31,11 +27,11 @@ const orderSchema = z.object({
     )
     .min(1, "Cart is empty"),
   shippingInfo: z.object({
-    fullName: z.string().min(2, "Full name must contain at least 2 characters"),
-    phone: z.string().min(8, "Phone number is not valid"),
-    address: z.string().min(5, "Address must contain at least 5 characters"),
+    fullName: z.string().min(2, "Họ và tên phải có ít nhất 2 ký tự"),
+    phone: z.string().min(8, "Số điện thoại không hợp lệ"),
+    address: z.string().optional().default("Nhận tại showroom Ngọc Triết Store"),
   }),
-  paymentMethod: z.enum(["cod", "vietqr"]).default("cod"),
+  paymentMethod: z.enum(["cod", "store"]).default("cod"),
   summary: z
     .object({
       shipping: z
@@ -47,6 +43,16 @@ const orderSchema = z.object({
       grand: z.number().min(0).optional(),
     })
     .optional(),
+}).superRefine((data, ctx) => {
+  if (data.paymentMethod === "cod") {
+    if (!data.shippingInfo.address || data.shippingInfo.address.trim().length < 5) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Vui lòng nhập địa chỉ giao hàng hợp lệ khi chọn thanh toán khi nhận hàng (COD)",
+        path: ["shippingInfo", "address"],
+      });
+    }
+  }
 });
 
 const asyncHandler = (fn) => (req, res, next) =>
@@ -56,15 +62,120 @@ const updateStatusSchema = z.object({
   status: z.enum(["pending", "processing", "shipped", "delivered", "cancelled"]),
 });
 
-const ORDER_STATUS_LABELS = {
-  pending: "Chờ xác nhận",
-  processing: "Đã duyệt",
-  shipped: "Đang giao",
-  delivered: "Đã giao",
-  cancelled: "Đã hủy",
+const getOrderStatusLabel = (status, paymentMethod) => {
+  const isStore = paymentMethod === "store";
+  if (isStore) {
+    switch (status) {
+      case "pending":
+        return "Chờ chuẩn bị máy";
+      case "processing":
+      case "shipped":
+        return "Máy sẵn sàng tại Showroom";
+      case "delivered":
+        return "Khách đã nhận máy";
+      case "cancelled":
+        return "Đã hủy giữ máy";
+      default:
+        return status;
+    }
+  }
+
+  switch (status) {
+    case "pending":
+      return "Chờ xác nhận đơn";
+    case "processing":
+      return "Đang chuẩn bị hàng";
+    case "shipped":
+      return "Đang giao hàng (Ship COD)";
+    case "delivered":
+      return "Giao hàng thành công";
+    case "cancelled":
+      return "Đã hủy đơn";
+    default:
+      return status;
+  }
 };
 
 const SHIPPING_FLAT_FEE = 30_000;
+
+const variantFilter = (variant) =>
+  variant?._id
+    ? { _id: variant._id }
+    : { color: variant?.color || "", capacity: variant?.capacity || "" };
+
+const normalizeVariantValue = (value) =>
+  value === undefined || value === null ? "" : value.toString().trim().toLowerCase();
+
+const reserveInventory = async (product, quantity, variant) => {
+  const usesVariantStock =
+    variant?.stock !== null &&
+    variant?.stock !== undefined &&
+    Number.isFinite(Number(variant.stock));
+
+  if (usesVariantStock) {
+    const selected = variantFilter(variant);
+    return Product.findOneAndUpdate(
+      {
+        _id: product._id,
+        stock: { $gte: quantity },
+        variants: {
+          $elemMatch: { ...selected, stock: { $gte: quantity } },
+        },
+      },
+      {
+        $inc: {
+          stock: -quantity,
+          "variants.$[variant].stock": -quantity,
+        },
+      },
+      {
+        new: true,
+        arrayFilters: [
+          { ...Object.fromEntries(
+            Object.entries(selected).map(([key, value]) => [`variant.${key}`, value])
+          ), "variant.stock": { $gte: quantity } },
+        ],
+      }
+    );
+  }
+
+  return Product.findOneAndUpdate(
+    { _id: product._id, stock: { $gte: quantity } },
+    { $inc: { stock: -quantity } },
+    { new: true }
+  );
+};
+
+const releaseInventoryReservation = async (reservation) => {
+  if (reservation.variant) {
+    const selected = variantFilter(reservation.variant);
+    const result = await Product.updateOne(
+      {
+        _id: reservation.productId,
+        variants: { $elemMatch: { ...selected, stock: { $ne: null } } },
+      },
+      {
+        $inc: {
+          stock: reservation.quantity,
+          "variants.$[variant].stock": reservation.quantity,
+        },
+      },
+      {
+        arrayFilters: [
+          Object.fromEntries(
+            Object.entries(selected).map(([key, value]) => [`variant.${key}`, value])
+          ),
+        ],
+      }
+    );
+    if (result.matchedCount > 0) return;
+  }
+
+  await Product.updateOne(
+    { _id: reservation.productId },
+    { $inc: { stock: reservation.quantity } }
+  );
+};
 
 const DEFAULT_WARRANTY_MONTHS = 12;
 const FALLBACK_WARRANTY_POLICY =
@@ -169,7 +280,7 @@ const buildOrderPayload = (order, reviewedProducts) => {
 
   return {
     ...doc,
-    statusLabel: ORDER_STATUS_LABELS[doc.status] || doc.status,
+    statusLabel: getOrderStatusLabel(doc.status, doc.paymentMethod),
   };
 };
 
@@ -202,128 +313,144 @@ export const createOrder = asyncHandler(async (req, res) => {
 
   let itemsTotal = 0;
   const orderItems = [];
+  const reservations = [];
   const promotions = await loadActivePromotions();
   const customerTier = req.user?.customerTier;
 
-  for (const item of payload.items) {
-    const product = productMap.get(item.productId);
-    if (!product) {
-      return res.status(400).json({
-        success: false,
-        message: "Product not found",
+  try {
+    for (const item of payload.items) {
+      const product = productMap.get(item.productId);
+      if (!product) {
+        const error = new Error("Product not found");
+        error.statusCode = 400;
+        throw error;
+      }
+
+      const variantSelection = {
+        color: item.color || "",
+        capacity: item.capacity || "",
+      };
+      const selectedVariant = findVariantForSelection(
+        product.variants,
+        variantSelection
+      );
+      const variants = Array.isArray(product.variants) ? product.variants : [];
+      const requiresColor = variants.some((variant) => normalizeVariantValue(variant.color));
+      const requiresCapacity = variants.some((variant) => normalizeVariantValue(variant.capacity));
+      const invalidVariantSelection =
+        (requiresColor && !variantSelection.color) ||
+        (requiresCapacity && !variantSelection.capacity) ||
+        (variantSelection.color &&
+          normalizeVariantValue(selectedVariant?.color) !==
+            normalizeVariantValue(variantSelection.color)) ||
+        (variantSelection.capacity &&
+          normalizeVariantValue(selectedVariant?.capacity) !==
+            normalizeVariantValue(variantSelection.capacity));
+
+      if (variants.length > 0 && invalidVariantSelection) {
+        const error = new Error("Vui lòng chọn đúng màu sắc và dung lượng sản phẩm");
+        error.statusCode = 400;
+        throw error;
+      }
+
+      const pricing = resolveEffectivePricing(product, {
+        promotions,
+        customerTier,
+        variantSelection,
+      });
+      const reserved = await reserveInventory(
+        product,
+        item.quantity,
+        selectedVariant
+      );
+
+      if (!reserved) {
+        const error = new Error(
+          `Sản phẩm ${product.name} hoặc biến thể đã chọn không đủ tồn kho`
+        );
+        error.statusCode = 409;
+        throw error;
+      }
+
+      const reservation = {
+        productId: product._id,
+        quantity: item.quantity,
+        variant: selectedVariant,
+      };
+      reservations.push(reservation);
+
+      const price = pricing.finalPrice;
+      const rawListedPrice = Number(product.oldPrice);
+      const listedPrice =
+        Number.isFinite(rawListedPrice) && rawListedPrice > 0
+          ? rawListedPrice
+          : pricing.originalPrice || pricing.basePrice || price;
+      itemsTotal += price * item.quantity;
+
+      orderItems.push({
+        product: product._id,
+        variantId: selectedVariant?._id || null,
+        name: product.name,
+        price,
+        listedPrice,
+        quantity: item.quantity,
+        image: selectedVariant?.images?.[0] || product.images?.[0] || "",
+        color: item.color || "",
+        capacity: item.capacity || "",
       });
     }
-
-    if (product.stock < item.quantity) {
-      return res.status(400).json({
-        success: false,
-        message: `Product ${product.name} is out of stock`,
-      });
-    }
-
-    const pricing = resolveEffectivePricing(product, {
-      promotions,
-      customerTier,
-    });
-    const price = pricing.finalPrice;
-    const rawListedPrice =
-      typeof product.oldPrice === "number" ? product.oldPrice : Number(product.oldPrice);
-    const listedPrice =
-      Number.isFinite(rawListedPrice) && rawListedPrice > 0
-        ? rawListedPrice
-        : price;
-    const lineTotal = price * item.quantity;
-    itemsTotal += lineTotal;
-
-    product.stock = Math.max(product.stock - item.quantity, 0);
-    await product.save();
-
-    orderItems.push({
-      product: product._id,
-      name: product.name,
-      price,
-      listedPrice,
-      quantity: item.quantity,
-      image: product.images?.[0] || "",
-      color: item.color || "",
-      capacity: item.capacity || "",
-    });
+  } catch (error) {
+    await Promise.allSettled(
+      reservations.map(releaseInventoryReservation)
+    );
+    throw error;
   }
 
-  const isVietqr = payload.paymentMethod === "vietqr";
+  const isStorePickup = payload.paymentMethod === "store";
   const summaryShipping =
     typeof payload.summary?.shipping === "number"
       ? Math.max(0, Math.round(payload.summary.shipping))
       : null;
-  const shippingFee =
-    summaryShipping !== null
-      ? Math.max(SHIPPING_FLAT_FEE, summaryShipping)
-      : SHIPPING_FLAT_FEE;
+  const shippingFee = isStorePickup
+    ? 0
+    : summaryShipping !== null
+    ? Math.max(SHIPPING_FLAT_FEE, summaryShipping)
+    : SHIPPING_FLAT_FEE;
   const grandTotal = itemsTotal + shippingFee;
 
-  const order = await Order.create({
-    user: req.user._id,
-    items: orderItems,
-    shippingInfo: payload.shippingInfo,
-    paymentMethod: payload.paymentMethod,
-    payment: {
-      provider: payload.paymentMethod,
-      status: isVietqr ? "awaiting" : "pending",
-      message: isVietqr
-        ? "Đang chờ bạn thanh toán qua VietQR."
-        : "Thanh toán khi nhận hàng.",
-    },
-    totals: {
-      items: itemsTotal,
-      shipping: shippingFee,
-      grand: grandTotal,
-    },
-  });
+  const paymentMessage = isStorePickup
+    ? "Nhận máy và thanh toán trực tiếp tại Ngọc Triết Store."
+    : "Thanh toán khi nhận hàng (COD).";
 
-let vietqrMeta = null;
-
-if (isVietqr) {
+  let order;
   try {
-    const reference = generateVietqrReference(order._id?.toString?.() || "");
-    const transferContent = buildTransferContent(reference);
-    const qrImageUrl = buildVietqrImageUrl({
-      amount: grandTotal,
-      description: transferContent,
+    order = await Order.create({
+      user: req.user._id,
+      items: orderItems,
+      shippingInfo: payload.shippingInfo,
+      paymentMethod: payload.paymentMethod,
+      payment: {
+        provider: payload.paymentMethod,
+        status: "pending",
+        message: paymentMessage,
+      },
+      totals: {
+        items: itemsTotal,
+        shipping: shippingFee,
+        grand: grandTotal,
+      },
     });
-
-    order.payment = {
-      provider: "vietqr",
-      status: "awaiting",
-      reference,
-      qrData: qrImageUrl,
-      quickLink: qrImageUrl,
-      transferContent,
-  
-    };
-    await order.save();
-
-    vietqrMeta = {
-      qrImageUrl,
-      transferContent,
-    };
   } catch (error) {
-    await restockOrderInventory(order);
-    await Order.findByIdAndDelete(order._id);
+    await Promise.allSettled(
+      reservations.map(releaseInventoryReservation)
+    );
     throw error;
   }
-} else {
+
   await adjustUserLifetimeSpend(req.user._id, grandTotal);
-}
 
-const hydrated = await populateOrder(Order.findById(order._id));
-const responseOrder = buildOrderPayload(hydrated);
-
-if (isVietqr && vietqrMeta) {
-  responseOrder.payment = responseOrder.payment || {};
-  responseOrder.payment.qrData = vietqrMeta.qrImageUrl;
-  responseOrder.payment.quickLink = vietqrMeta.qrImageUrl;
-  responseOrder.payment.transferContent = vietqrMeta.transferContent;
-}
+  const hydrated = await populateOrder(Order.findById(order._id));
+  const responseOrder = buildOrderPayload(hydrated);
 
 res.status(201).json({
     success: true,
@@ -455,53 +582,118 @@ export const getMyWarrantyItems = asyncHandler(async (req, res) => {
   });
 });
 
-export const confirmMyVietqrPayment = asyncHandler(async (req, res) => {
-  const order = await Order.findOne({
-    _id: req.params.id,
-    user: req.user._id,
-  });
-
-  if (!order) {
-    return res.status(404).json({
-      success: false,
-      message: "Order not found",
-    });
-  }
-
-  if (order.paymentMethod !== "vietqr") {
+export const lookupWarrantyByPhone = asyncHandler(async (req, res) => {
+  const rawPhone = (req.query.phone || "").trim();
+  if (!rawPhone) {
     return res.status(400).json({
       success: false,
-      message: "Đơn hàng không sử dụng VietQR",
+      message: "Vui lòng nhập số điện thoại để tra cứu bảo hành.",
     });
   }
 
-  const currentStatus = order.payment?.status || "pending";
-  if (currentStatus === "completed") {
-    const hydrated = await populateOrder(Order.findById(order._id));
-
-    return res.json({
-      success: true,
-      message: "Thanh toán đã được xác nhận",
-      data: buildOrderPayload(hydrated),
+  const cleanPhone = rawPhone.replace(/\D/g, "");
+  if (cleanPhone.length < 8) {
+    return res.status(400).json({
+      success: false,
+      message: "Số điện thoại không hợp lệ (tối thiểu 8-11 chữ số).",
     });
   }
 
-  order.payment = order.payment || {};
-  order.payment.status = "completed";
-  order.payment.confirmedAt = new Date();
-  order.payment.provider = "vietqr";
-  order.payment.message = "";
+  const localPhone = cleanPhone.startsWith("84") && cleanPhone.length > 9
+    ? "0" + cleanPhone.slice(2)
+    : cleanPhone;
 
-  await order.save();
+  const phoneRegex = new RegExp(localPhone.replace(/^0/, "(0|\\+84)?"), "i");
 
-  await adjustUserLifetimeSpend(order.user, order.totals?.grand ?? 0);
+  const orders = await populateOrder(
+    Order.find({
+      "shippingInfo.phone": { $regex: phoneRegex },
+      status: { $ne: "cancelled" },
+    }).sort({ createdAt: -1 })
+  );
 
-  const updated = await populateOrder(Order.findById(order._id));
+  const now = dayjs();
+  const warrantyItems = [];
+  let customerName = "";
 
-  res.json({
+  orders.forEach((order) => {
+    const baseOrder =
+      typeof order.toObject === "function"
+        ? order.toObject({ virtuals: true })
+        : { ...order };
+    const activatedAt = baseOrder.createdAt
+      ? new Date(baseOrder.createdAt)
+      : new Date();
+    const orderId = order._id?.toString?.() || "";
+    const orderCode = orderId.slice(-8).toUpperCase();
+    const orderStatus = baseOrder.status || "pending";
+    if (!customerName && baseOrder.shippingInfo?.fullName) {
+      customerName = baseOrder.shippingInfo.fullName;
+    }
+
+    const items = Array.isArray(order.items) ? order.items : [];
+    items.forEach((item) => {
+      const currentItem =
+        typeof item.toObject === "function" ? item.toObject() : item;
+      const productDoc = currentItem.product;
+
+      const productId = getItemProductId(currentItem);
+      const productName =
+        productDoc?.name || currentItem.name || "Sản phẩm không xác định";
+      const productBrand = productDoc?.brand || "";
+      const productSlug = productDoc?.slug || null;
+      const warrantyPolicy =
+        productDoc?.warrantyPolicy?.trim?.() || FALLBACK_WARRANTY_POLICY;
+      const warrantyMonths = resolveWarrantyMonths(productDoc);
+      const expiresAt = dayjs(activatedAt).add(warrantyMonths, "month");
+      const primaryImage =
+        (Array.isArray(productDoc?.images) && productDoc.images[0]) ||
+        currentItem.image ||
+        "";
+
+      const diffDays = expiresAt.diff(now, "day");
+      const isExpired = expiresAt.isBefore(now);
+
+      warrantyItems.push({
+        id: `${orderId}-${productId}`,
+        orderId,
+        orderCode,
+        orderStatus,
+        paymentMethod: baseOrder.paymentMethod || "cod",
+        buyerName: baseOrder.shippingInfo?.fullName || "Khách hàng",
+        buyerPhone: baseOrder.shippingInfo?.phone || rawPhone,
+        productId,
+        productSlug,
+        productName,
+        productBrand,
+        quantity: currentItem.quantity || 1,
+        price:
+          Number(currentItem.price ?? NaN) ||
+          Number(productDoc?.finalPrice ?? NaN) ||
+          Number(productDoc?.price ?? 0),
+        color: currentItem.color || "",
+        capacity: currentItem.capacity || "",
+        warrantyPolicy,
+        warrantyMonths,
+        activatedAt: activatedAt.toISOString(),
+        expiresAt: expiresAt.toISOString(),
+        status: isExpired ? "expired" : "active",
+        daysRemaining: Math.max(0, diffDays),
+        image: primaryImage,
+      });
+    });
+  });
+
+  return res.json({
     success: true,
-    message: "Đã xác nhận thanh toán VietQR",
-    data: buildOrderPayload(updated),
+    data: {
+      phone: rawPhone,
+      customerName: customerName || "Quý khách",
+      total: warrantyItems.length,
+      active: warrantyItems.filter((item) => item.status === "active").length,
+      expired: warrantyItems.filter((item) => item.status === "expired").length,
+      items: warrantyItems,
+    },
   });
 });
 
