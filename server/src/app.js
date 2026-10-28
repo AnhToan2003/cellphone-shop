@@ -53,8 +53,15 @@ const envOrigins = parseOrigins(envOriginSource);
 const deploymentOrigin = process.env.VERCEL_URL
   ? `https://${process.env.VERCEL_URL}`
   : "";
+
+const productionOrigins = [
+  deploymentOrigin,
+  "https://ngoctrietstore.vercel.app",
+  "http://ngoctrietstore.vercel.app",
+].filter(Boolean);
+
 const fallbackOrigins = isProduction
-  ? [deploymentOrigin]
+  ? productionOrigins
   : [
       process.env.CLIENT_URL,
       `http://localhost:${serverPort}`,
@@ -63,15 +70,37 @@ const fallbackOrigins = isProduction
       "http://localhost:5174",
       "http://127.0.0.1:5173",
       "http://127.0.0.1:5174",
+      "https://ngoctrietstore.vercel.app",
     ];
 const allowedOrigins = Array.from(new Set([...envOrigins, ...fallbackOrigins].filter(Boolean)));
 if (allowedOrigins.length === 0 && !isProduction) {
   allowedOrigins.push(`http://localhost:${serverPort}`);
 }
 
+const isAllowedOrigin = (origin = "") => {
+  if (!origin) return true;
+  try {
+    const parsed = new URL(origin);
+    const host = parsed.hostname.toLowerCase();
+    if (
+      host === "localhost" ||
+      host === "127.0.0.1" ||
+      host === "ngoctrietstore.vercel.app" ||
+      host.endsWith(".vercel.app") ||
+      host.endsWith("ngoctrietstore.vn") ||
+      host.endsWith("ngoctrietstore.com")
+    ) {
+      return true;
+    }
+  } catch {
+    // invalid URL format, fall back to string matching
+  }
+  return allowedOrigins.some((allowed) => matchesOrigin(origin, allowed));
+};
+
 const corsOptions = {
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.some((allowed) => matchesOrigin(origin, allowed))) {
+    if (isAllowedOrigin(origin)) {
       return callback(null, true);
     }
     return callback(new Error(`Origin ${origin} not allowed by CORS`));
