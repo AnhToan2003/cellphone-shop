@@ -12,7 +12,7 @@
     }
   },
   "rewrites": [
-    { "source": "^/api/(?!express(?:/|$))(.*)$", "destination": "/api/express?__route=$1" },
+    { "source": "/api/:path((?!express).*)", "destination": "/api/express?__route=:path" },
     { "source": "/:path((?!api/).*)", "destination": "/index.html" }
   ],
   "headers": [
