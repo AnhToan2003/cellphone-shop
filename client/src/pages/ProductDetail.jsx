@@ -483,7 +483,7 @@ const ProductDetail = () => {
     }
   };
 
-  if (selectedStatus === "loading" || !product) {
+  if (selectedStatus === "loading" || (selectedStatus === "idle" && !product)) {
     return (
       <div className="container-safe py-16">
         <div className="grid gap-8 md:grid-cols-2">
@@ -492,6 +492,35 @@ const ProductDetail = () => {
             <div className="h-10 w-2/3 animate-pulse rounded bg-white" />
             <div className="h-6 w-1/3 animate-pulse rounded bg-white" />
             <div className="h-32 animate-pulse rounded bg-white" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!product) {
+    return (
+      <div className="container-safe py-16">
+        <div className="mx-auto max-w-xl rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+          <h1 className="text-xl font-bold text-slate-900">Không tải được sản phẩm</h1>
+          <p className="mt-3 text-sm text-slate-600">
+            Vui lòng thử lại. Nếu sản phẩm đã bị gỡ, bạn có thể quay về danh sách.
+          </p>
+          <div className="mt-6 flex justify-center gap-3">
+            <button
+              type="button"
+              onClick={() => dispatch(fetchProductBySlug(slug))}
+              className="rounded-full bg-slate-950 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800"
+            >
+              Thử tải lại
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate("/products")}
+              className="rounded-full border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+            >
+              Xem sản phẩm khác
+            </button>
           </div>
         </div>
       </div>

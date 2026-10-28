@@ -6,9 +6,13 @@
   "functions": {
     "api/[...path].js": {
       "maxDuration": 30
+    },
+    "api/express.js": {
+      "maxDuration": 30
     }
   },
   "rewrites": [
+    { "source": "^/api/(?!express(?:/|$))(.*)$", "destination": "/api/express?__route=$1" },
     { "source": "/:path((?!api/).*)", "destination": "/index.html" }
   ],
   "headers": [

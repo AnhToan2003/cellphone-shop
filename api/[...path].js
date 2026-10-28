@@ -18,6 +18,20 @@ const prepareApplication = () => {
 
 export default async function handler(request, response) {
   try {
+    // Vercel's non-framework file routes don't forward arbitrary nested paths
+    // through this catch-all. vercel.json rewrites them through /api/express and
+    // passes the original route in __route so Express can match it normally.
+    const incomingUrl = new URL(request.url || "/", "http://vercel.local");
+    const expressPath = incomingUrl.searchParams.get("__route");
+    if (expressPath !== null) {
+      incomingUrl.searchParams.delete("__route");
+      const normalizedPath = expressPath.replace(/^\/+/, "");
+      if (normalizedPath.includes("..")) {
+        return response.status(400).json({ success: false, message: "Invalid API path" });
+      }
+      request.url = `/api/${normalizedPath}${incomingUrl.search}`;
+    }
+
     await prepareApplication();
     return app(request, response);
   } catch (error) {

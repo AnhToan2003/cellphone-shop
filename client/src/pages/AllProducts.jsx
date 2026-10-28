@@ -169,12 +169,13 @@ const AllProducts = () => {
           ? response.data.data
           : [];
         setProducts(items);
-        const metaPayload = response.data?.meta || {};
+        const metaPayload = response.data?.pagination || response.data?.meta || {};
+        const totalItems = metaPayload.totalItems ?? metaPayload.total ?? items.length;
         setMeta({
-          total: metaPayload.total ?? items.length,
+          total: totalItems,
           totalPages:
             metaPayload.totalPages ??
-            Math.max(1, Math.ceil((metaPayload.total || items.length) / PAGE_SIZE)),
+            Math.max(1, Math.ceil(totalItems / PAGE_SIZE)),
         });
       } catch (err) {
         if (cancelled) return;
