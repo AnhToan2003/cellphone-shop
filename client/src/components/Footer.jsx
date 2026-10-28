@@ -70,7 +70,7 @@ export default function Footer() {
             />
             <div>
               <h3 className="font-display text-base font-bold text-white tracking-tight">
-                NGỌC TRIẾT STORE
+                NgocTrietStore
               </h3>
               <p className="text-xs text-slate-400 font-medium">Chuyên Thiết Bị & Phụ Kiện Apple</p>
             </div>
@@ -116,7 +116,7 @@ export default function Footer() {
 
       {/* Copyright */}
       <div className="border-t border-white/10 bg-black/60 py-5 text-center text-xs text-slate-500">
-        © {year} <span className="font-semibold text-slate-400">Ngọc Triết Store</span>. Chuyên Thiết Bị & Phụ Kiện Apple. Mọi quyền được bảo lưu.
+        © {year} <span className="font-semibold text-slate-400">NgocTrietStore</span>. Chuyên Thiết Bị & Phụ Kiện Apple. Mọi quyền được bảo lưu.
       </div>
     </footer>
   );

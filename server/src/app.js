@@ -110,7 +110,7 @@ export const createServer = () => {
   if (process.env.NODE_ENV !== "test") app.use(morgan("dev"));
 
   // APIs
-  app.get("/api/health", (req, res) => res.json({ success: true, app: "Ngọc Triết Store", status: "ok", timestamp: new Date().toISOString() }));
+  app.get("/api/health", (req, res) => res.json({ success: true, app: "NgocTrietStore", status: "ok", timestamp: new Date().toISOString() }));
   app.use("/api/auth", authRoutes);
   app.use("/api/products", productRoutes);
   app.use("/api/orders", orderRoutes);

@@ -227,7 +227,7 @@ export default function Header() {
             </div>
             <div className="flex flex-col">
               <span className="font-display text-base md:text-lg font-bold tracking-tight text-white group-hover:text-slate-300 transition">
-                NGỌC TRIẾT
+                NgocTrietStore
               </span>
               <span className="text-[9px] md:text-[10px] font-medium tracking-[0.2em] text-slate-400 uppercase">
                 Apple Specialist

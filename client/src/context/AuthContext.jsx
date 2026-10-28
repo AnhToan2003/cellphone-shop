@@ -8,6 +8,7 @@ import {
   useState,
 } from "react";
 import { useNavigate } from "react-router-dom";
+import { getApiUrl } from "../config/api.js";
 
 const STORAGE_KEY = "cellphones_auth";
 
@@ -70,14 +71,6 @@ const clearPersistedAuth = () => {
   const storage = getStorage();
   if (!storage) return;
   storage.removeItem(STORAGE_KEY);
-};
-
-const getApiUrl = (path) => {
-  const base = import.meta?.env?.VITE_API_URL;
-  if (base) {
-    return `${base}${path}`;
-  }
-  return `/api${path}`;
 };
 
 export function AuthProvider({ children }) {
