@@ -37,7 +37,7 @@ export default function PhoneContactPopup() {
       {/* Full-screen backdrop: tap anywhere outside on mobile or desktop to close immediately */}
       {open && (
         <div
-          className="fixed inset-0 z-40 bg-black/25 backdrop-blur-[1px] transition-opacity duration-200"
+          className="fixed inset-0 z-30 bg-black/25 backdrop-blur-[1px] transition-opacity duration-200"
           onClick={() => setOpen(false)}
           aria-hidden="true"
         />
@@ -46,7 +46,7 @@ export default function PhoneContactPopup() {
       <aside
         ref={popupRef}
         aria-label="Liên hệ nhanh"
-        className="fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] right-3.5 sm:bottom-6 sm:right-6 z-50 flex flex-col items-end gap-3 select-none"
+        className="fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] right-3.5 sm:bottom-6 sm:right-6 z-30 flex flex-col items-end gap-3 select-none"
       >
         {/* Expanded contact panel */}
         {open && (

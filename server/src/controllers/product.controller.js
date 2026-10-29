@@ -187,17 +187,130 @@ export const listProducts = asyncHandler(async (req, res) => {
     limit: Number(limit),
   });
 
-  const [items, total] = await Promise.all([
-    Product.find(filters)
-      .select(
-        "name slug brand price oldPrice finalPrice discountPercent stock imageUrl rating ratingCount featured category subCategory options.colors options.capacities"
-      )
-      .sort(sortQuery)
-      .skip(pagination.skip)
-      .limit(pagination.limit)
-      .lean(),
-    Product.countDocuments(filters),
-  ]);
+  const isDefaultSort = !sort || sort === "popular" || sort === "newest";
+  const isAllCategories = !category && !subCategory;
+
+  let items;
+  let total;
+
+  if (isAllCategories && isDefaultSort) {
+    try {
+      const matchStage = conditions.length ? { $and: conditions } : {};
+      const pipeline = [
+        ...(conditions.length ? [{ $match: matchStage }] : []),
+        {
+          $addFields: {
+            categoryRank: {
+              $cond: [
+                {
+                  $or: [
+                    { $eq: ["$category", "iPhone"] },
+                    { $regexMatch: { input: "$name", regex: /iphone/i } },
+                  ],
+                },
+                1,
+                {
+                  $cond: [
+                    {
+                      $or: [
+                        { $eq: ["$category", "iPad"] },
+                        { $regexMatch: { input: "$name", regex: /ipad/i } },
+                      ],
+                    },
+                    2,
+                    {
+                      $cond: [
+                        {
+                          $or: [
+                            { $eq: ["$category", "Mac"] },
+                            { $regexMatch: { input: "$name", regex: /mac/i } },
+                          ],
+                        },
+                        3,
+                        {
+                          $cond: [
+                            {
+                              $or: [
+                                { $eq: ["$category", "Apple Watch"] },
+                                { $regexMatch: { input: "$name", regex: /watch/i } },
+                              ],
+                            },
+                            4,
+                            5,
+                          ],
+                        },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+          },
+        },
+        {
+          $sort: { categoryRank: 1, featured: -1, price: -1, _id: -1 },
+        },
+        {
+          $facet: {
+            items: [
+              { $skip: pagination.skip },
+              { $limit: pagination.limit },
+              {
+                $project: {
+                  name: 1,
+                  slug: 1,
+                  brand: 1,
+                  price: 1,
+                  oldPrice: 1,
+                  finalPrice: 1,
+                  discountPercent: 1,
+                  stock: 1,
+                  imageUrl: 1,
+                  rating: 1,
+                  ratingCount: 1,
+                  featured: 1,
+                  category: 1,
+                  subCategory: 1,
+                  options: 1,
+                  variants: 1,
+                },
+              },
+            ],
+            total: [{ $count: "count" }],
+          },
+        },
+      ];
+
+      const aggResult = await Product.aggregate(pipeline);
+      items = aggResult[0]?.items || [];
+      total = aggResult[0]?.total[0]?.count || 0;
+    } catch (aggErr) {
+      console.warn("Aggregate sort fallback:", aggErr);
+      [items, total] = await Promise.all([
+        Product.find(filters)
+          .select(
+            "name slug brand price oldPrice finalPrice discountPercent stock imageUrl rating ratingCount featured category subCategory options.colors options.capacities"
+          )
+          .sort(sortQuery)
+          .skip(pagination.skip)
+          .limit(pagination.limit)
+          .lean(),
+        Product.countDocuments(filters),
+      ]);
+    }
+  } else {
+    [items, total] = await Promise.all([
+      Product.find(filters)
+        .select(
+          "name slug brand price oldPrice finalPrice discountPercent stock imageUrl rating ratingCount featured category subCategory options.colors options.capacities"
+        )
+        .sort(sortQuery)
+        .skip(pagination.skip)
+        .limit(pagination.limit)
+        .lean(),
+      Product.countDocuments(filters),
+    ]);
+  }
 
   const promotions = await loadActivePromotions();
   const customerTier = req.user?.customerTier;

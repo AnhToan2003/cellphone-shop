@@ -257,7 +257,7 @@ export default function Header() {
   return (
     <header
       ref={headerRef}
-      className="sticky top-0 z-40 w-full transition-all duration-300 pt-[env(safe-area-inset-top,0px)] bg-slate-950"
+      className="sticky top-0 z-50 w-full transition-all duration-300 pt-[env(safe-area-inset-top,0px)] bg-slate-950"
       onMouseLeave={handleMouseLeaveNav}
     >
       {/* Main Apple-style Minimalist Header */}
@@ -620,12 +620,13 @@ export default function Header() {
       {isMobileMenuOpen && (
         <div
           style={{ top: `${headerHeight || 96}px` }}
-          className="lg:hidden fixed inset-x-0 bottom-0 z-40 bg-slate-950/98 backdrop-blur-3xl border-t border-white/10 text-white overflow-y-auto overscroll-contain animate-fade-in-up flex flex-col justify-between"
+          className="lg:hidden fixed inset-x-0 bottom-0 z-50 bg-[#090d16] border-t border-white/10 text-white overflow-y-auto overscroll-contain flex flex-col justify-between shadow-2xl"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Main Navigation Tree */}
-          <div className="px-5 py-6">
-            <div className="space-y-1 divide-y divide-white/5">
+          <div className="px-4 py-4 space-y-4">
+            {/* Category list */}
+            <div className="divide-y divide-white/10">
               {navCatalog.map((cat) => {
                 const isExpanded = mobileExpandedCat === cat.name;
                 return (
@@ -637,54 +638,61 @@ export default function Header() {
                           setIsMobileMenuOpen(false);
                           setMobileExpandedCat(null);
                         }}
-                        className="text-lg font-semibold tracking-tight text-white hover:text-blue-400 transition"
+                        className="text-[15px] font-semibold tracking-tight text-white hover:text-blue-400 transition flex items-center gap-2"
                       >
-                        {cat.name}
+                        <span>{cat.name}</span>
+                        {cat.badge && (
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                            {cat.badge}
+                          </span>
+                        )}
                       </Link>
                       {cat.subCategories?.length > 0 && (
                         <button
                           type="button"
                           onClick={() => setMobileExpandedCat(isExpanded ? null : cat.name)}
-                          className="p-2 text-slate-400 hover:text-white transition"
+                          className="p-1.5 text-slate-400 hover:text-white transition"
                           aria-label={`Mở rộng ${cat.name}`}
                         >
                           <FiChevronDown
-                            size={18}
+                            size={16}
                             className={`transition-transform duration-200 ${
-                              isExpanded ? "rotate-180 text-white" : ""
+                              isExpanded ? "rotate-180 text-blue-400" : ""
                             }`}
                           />
                         </button>
                       )}
                     </div>
 
-                    {/* Subcategories list */}
+                    {/* Subcategories 2-column grid */}
                     {isExpanded && cat.subCategories?.length > 0 && (
-                      <div className="mt-2.5 pl-3 border-l-2 border-blue-500/50 space-y-2 animate-fade-in-up">
+                      <div className="mt-2.5 pt-2 border-t border-white/5 space-y-2 animate-fade-in-up">
                         <Link
                           to={cat.to}
                           onClick={() => {
                             setIsMobileMenuOpen(false);
                             setMobileExpandedCat(null);
                           }}
-                          className="flex items-center gap-1.5 text-xs font-bold text-blue-400 hover:text-blue-300 py-1"
+                          className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-400 hover:text-blue-300"
                         >
                           <span>Xem tất cả {cat.name}</span>
-                          <FiArrowRight size={13} />
+                          <FiArrowRight size={11} />
                         </Link>
-                        {cat.subCategories.map((sub) => (
-                          <Link
-                            key={sub.name}
-                            to={sub.to}
-                            onClick={() => {
-                              setIsMobileMenuOpen(false);
-                              setMobileExpandedCat(null);
-                            }}
-                            className="block text-sm text-slate-300 hover:text-white transition py-1"
-                          >
-                            {sub.name}
-                          </Link>
-                        ))}
+                        <div className="grid grid-cols-2 gap-1.5">
+                          {cat.subCategories.map((sub) => (
+                            <Link
+                              key={sub.name}
+                              to={sub.to}
+                              onClick={() => {
+                                setIsMobileMenuOpen(false);
+                                setMobileExpandedCat(null);
+                              }}
+                              className="text-xs text-slate-200 hover:text-white py-1.5 px-2.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/5 transition truncate"
+                            >
+                              {sub.name}
+                            </Link>
+                          ))}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -693,16 +701,16 @@ export default function Header() {
             </div>
 
             {/* Quick Services / Links */}
-            <div className="pt-6 mt-4 border-t border-white/10 space-y-3.5">
+            <div className="pt-4 border-t border-white/10 space-y-2">
               <NavLink
                 to="/warranty"
                 onClick={() => {
                   setIsMobileMenuOpen(false);
                   setMobileExpandedCat(null);
                 }}
-                className="flex items-center gap-3 text-sm font-medium text-slate-300 hover:text-white transition"
+                className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-white/[0.03] border border-white/5 text-xs sm:text-sm font-medium text-slate-200 hover:text-white hover:bg-white/[0.06] transition"
               >
-                <FiShield className="text-blue-400" size={16} />
+                <FiShield className="text-blue-400 shrink-0" size={15} />
                 <span>Chính sách bảo hành 1 đổi 1</span>
               </NavLink>
 
@@ -712,106 +720,22 @@ export default function Header() {
                   setIsMobileMenuOpen(false);
                   setMobileExpandedCat(null);
                 }}
-                className="flex items-center gap-3 text-sm font-medium text-slate-300 hover:text-white transition"
+                className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-white/[0.03] border border-white/5 text-xs sm:text-sm font-medium text-slate-200 hover:text-white hover:bg-white/[0.06] transition"
               >
-                <FiInfo className="text-blue-400" size={16} />
+                <FiInfo className="text-blue-400 shrink-0" size={15} />
                 <span>Giới thiệu Ngọc Triết Store</span>
               </NavLink>
 
               <a
                 href="tel:0922444444"
-                className="flex items-center gap-3 text-sm font-medium text-slate-300 hover:text-white transition"
+                className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs sm:text-sm font-medium text-emerald-300 hover:bg-emerald-500/20 transition"
               >
-                <FiPhoneCall className="text-emerald-400" size={16} />
+                <FiPhoneCall className="text-emerald-400 shrink-0" size={15} />
                 <span>
                   Hotline hỗ trợ: <strong className="text-white">0922 444 444</strong>
                 </span>
               </a>
             </div>
-          </div>
-
-          {/* Bottom Section: Account info / Login / Register */}
-          <div className="px-5 py-5 border-t border-white/10 bg-black/40 backdrop-blur-md">
-            {isAuthenticated && user ? (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs text-slate-400">Tài khoản</p>
-                    <p className="text-sm font-bold text-white truncate">{user.name || user.email}</p>
-                  </div>
-                  {tierLabel && (
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30 uppercase">
-                      {tierLabel}
-                    </span>
-                  )}
-                </div>
-                <div className="grid grid-cols-2 gap-2 pt-1">
-                  <Link
-                    to="/orders"
-                    onClick={() => {
-                      setIsMobileMenuOpen(false);
-                      setMobileExpandedCat(null);
-                    }}
-                    className="flex items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-white/5 py-2 text-xs font-semibold text-slate-200 hover:bg-white/10 transition"
-                  >
-                    <FiPackage size={14} />
-                    <span>Đơn hàng</span>
-                  </Link>
-                  {isAdmin && (
-                    <Link
-                      to="/admin"
-                      onClick={() => {
-                        setIsMobileMenuOpen(false);
-                        setMobileExpandedCat(null);
-                      }}
-                      className="flex items-center justify-center rounded-xl bg-blue-600/30 border border-blue-500/40 py-2 text-xs font-bold text-blue-300 hover:bg-blue-600/40 transition"
-                    >
-                      Quản trị
-                    </Link>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      logout();
-                      setIsMobileMenuOpen(false);
-                      setMobileExpandedCat(null);
-                    }}
-                    className={`${
-                      isAdmin ? "col-span-2" : "col-span-1"
-                    } flex items-center justify-center gap-1.5 rounded-xl border border-rose-500/20 bg-rose-500/10 py-2 text-xs font-semibold text-rose-400 hover:bg-rose-500/20 transition`}
-                  >
-                    <FiLogOut size={14} />
-                    <span>Đăng xuất</span>
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                <p className="text-xs text-slate-400 text-center mb-2">Tài khoản & Mua sắm</p>
-                <div className="grid grid-cols-2 gap-3">
-                  <Link
-                    to="/login"
-                    onClick={() => {
-                      setIsMobileMenuOpen(false);
-                      setMobileExpandedCat(null);
-                    }}
-                    className="flex items-center justify-center rounded-xl border border-white/20 bg-white/5 py-2.5 text-xs font-semibold text-white hover:bg-white/10 active:scale-95 transition"
-                  >
-                    Đăng nhập
-                  </Link>
-                  <Link
-                    to="/register"
-                    onClick={() => {
-                      setIsMobileMenuOpen(false);
-                      setMobileExpandedCat(null);
-                    }}
-                    className="flex items-center justify-center rounded-xl bg-blue-600 py-2.5 text-xs font-bold text-white hover:bg-blue-500 active:scale-95 transition shadow-lg shadow-blue-600/30"
-                  >
-                    Đăng ký
-                  </Link>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       )}

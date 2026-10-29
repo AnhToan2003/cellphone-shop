@@ -124,6 +124,16 @@ const EXPERIENCE_FEATURES = [
   },
 ];
 
+const getCategoryPriority = (product) => {
+  const cat = (product?.category || "").toLowerCase();
+  const name = (product?.name || "").toLowerCase();
+  if (cat.includes("iphone") || name.includes("iphone") || cat.includes("điện thoại")) return 1;
+  if (cat.includes("ipad") || name.includes("ipad")) return 2;
+  if (cat.includes("mac") || name.includes("macbook")) return 3;
+  if (cat.includes("watch")) return 4;
+  return 5;
+};
+
 const sortProducts = (products, option) => {
   const list = [...products];
   const getPrice = (product) => product.finalPrice ?? product.price ?? 0;
@@ -136,11 +146,25 @@ const sortProducts = (products, option) => {
     case "name":
       return list.sort((a, b) => a.name.localeCompare(b.name));
     default:
-      return list.sort(
-        (a, b) =>
+      return list.sort((a, b) => {
+        // ALWAYS prioritize iPhones (phones) at the top of the list
+        const priorityA = getCategoryPriority(a);
+        const priorityB = getCategoryPriority(b);
+        if (priorityA !== priorityB) {
+          return priorityA - priorityB;
+        }
+        // Flagship featured phones first
+        const featA = a.featured ? 1 : 0;
+        const featB = b.featured ? 1 : 0;
+        if (featA !== featB) {
+          return featB - featA;
+        }
+        return (
           (b.ratingCount ?? 0) - (a.ratingCount ?? 0) ||
+          getPrice(b) - getPrice(a) ||
           (b.rating ?? 0) - (a.rating ?? 0)
-      );
+        );
+      });
   }
 };
 
