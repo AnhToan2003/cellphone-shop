@@ -133,6 +133,7 @@ export default function Header() {
     };
   }, []);
 
+  const headerRef = useRef(null);
   const favoritesRef = useRef(null);
   const userMenuRef = useRef(null);
   const megaMenuTimeoutRef = useRef(null);
@@ -149,7 +150,7 @@ export default function Header() {
     setQuery(productFilters.search ?? "");
   }, [productFilters.search]);
 
-  // Click outside handlers
+  // Click outside handlers (supports both desktop mouse & mobile touch)
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (favoritesRef.current && !favoritesRef.current.contains(event.target)) {
@@ -158,9 +159,29 @@ export default function Header() {
       if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
         setShowUserMenu(false);
       }
+      if (headerRef.current && !headerRef.current.contains(event.target)) {
+        setIsMobileMenuOpen(false);
+        setMobileExpandedCat(null);
+        setActiveMegaCategory(null);
+      }
     };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        setShowFavorites(false);
+        setShowUserMenu(false);
+        setIsMobileMenuOpen(false);
+        setMobileExpandedCat(null);
+        setActiveMegaCategory(null);
+      }
+    };
+
+    document.addEventListener("pointerdown", handleClickOutside);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
   }, []);
 
   // Close menus on route change
@@ -206,6 +227,7 @@ export default function Header() {
 
   return (
     <header
+      ref={headerRef}
       className="sticky top-0 z-40 w-full transition-all duration-300"
       onMouseLeave={handleMouseLeaveNav}
     >
@@ -563,6 +585,18 @@ export default function Header() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Mobile Drawer Backdrop - tap anywhere on screen to close */}
+      {isMobileMenuOpen && (
+        <div
+          className="lg:hidden fixed inset-0 z-30 bg-black/60 backdrop-blur-sm transition-opacity duration-200"
+          onClick={() => {
+            setIsMobileMenuOpen(false);
+            setMobileExpandedCat(null);
+          }}
+          aria-hidden="true"
+        />
       )}
 
       {/* Mobile Drawer Menu */}

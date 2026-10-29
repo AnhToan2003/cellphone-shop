@@ -1,9 +1,13 @@
 import { createSlice } from "@reduxjs/toolkit";
 
-const CART_KEY = "cellphones_cart";
+const CART_KEY = "nts_cart_v3";
 
 const loadItems = () => {
+  if (typeof window === "undefined") return [];
   try {
+    // Purge old leftover development/test cart key so users start with a clean empty cart
+    localStorage.removeItem("cellphones_cart");
+
     const stored = localStorage.getItem(CART_KEY);
     if (!stored) {
       return [];
@@ -12,7 +16,7 @@ const loadItems = () => {
     if (Array.isArray(parsed)) {
       return parsed;
     }
-    if (Array.isArray(parsed.items)) {
+    if (Array.isArray(parsed?.items)) {
       return parsed.items;
     }
     return [];
@@ -23,7 +27,12 @@ const loadItems = () => {
 };
 
 const persistItems = (items) => {
-  localStorage.setItem(CART_KEY, JSON.stringify({ items }));
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(CART_KEY, JSON.stringify({ items }));
+  } catch {
+    // ignore storage quota errors
+  }
 };
 
 const calculateTotals = (items) =>
@@ -124,7 +133,10 @@ const cartSlice = createSlice({
       state.items = [];
       state.totalAmount = 0;
       state.totalQuantity = 0;
-      localStorage.removeItem(CART_KEY);
+      if (typeof window !== "undefined") {
+        localStorage.removeItem(CART_KEY);
+        localStorage.removeItem("cellphones_cart");
+      }
     },
   },
 });
