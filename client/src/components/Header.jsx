@@ -10,6 +10,11 @@ import {
   FiX,
   FiChevronDown,
   FiArrowRight,
+  FiPhoneCall,
+  FiShield,
+  FiInfo,
+  FiLogOut,
+  FiPackage,
 } from "react-icons/fi";
 
 import { useAuth } from "../context/AuthContext.jsx";
@@ -94,6 +99,7 @@ export default function Header() {
   const [activeMegaCategory, setActiveMegaCategory] = useState(null);
   const [mobileExpandedCat, setMobileExpandedCat] = useState(null);
   const [navCatalog, setNavCatalog] = useState(APPLE_NAV_CATALOG);
+  const [headerHeight, setHeaderHeight] = useState(0);
 
   useEffect(() => {
     let active = true;
@@ -200,6 +206,29 @@ export default function Header() {
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  // Track dynamic mobile navbar height
+  useEffect(() => {
+    const updateHeaderHeight = () => {
+      if (headerRef.current) {
+        setHeaderHeight(headerRef.current.offsetHeight);
+      }
+    };
+    updateHeaderHeight();
+    window.addEventListener("resize", updateHeaderHeight);
+    return () => window.removeEventListener("resize", updateHeaderHeight);
+  }, [isCompact, isMobileMenuOpen]);
+
+  // Lock background scroll when mobile curtain is open
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+  }, [isMobileMenuOpen]);
 
   const handleSearchSubmit = (event) => {
     event.preventDefault();
@@ -587,138 +616,203 @@ export default function Header() {
         </div>
       )}
 
-      {/* Mobile Drawer Backdrop - tap anywhere on screen to close */}
+      {/* APPLE MOBILE NAVIGATION CURTAIN */}
       {isMobileMenuOpen && (
         <div
-          className="lg:hidden fixed inset-0 z-40 bg-black/70 backdrop-blur-sm transition-opacity duration-200"
-          onClick={() => {
-            setIsMobileMenuOpen(false);
-            setMobileExpandedCat(null);
-          }}
-          aria-hidden="true"
-        />
-      )}
-
-      {/* Mobile Drawer Menu */}
-      {isMobileMenuOpen && (
-        <div
-          className="lg:hidden relative z-50 border-b border-white/10 bg-slate-950 px-4 py-3 text-slate-200 shadow-2xl backdrop-blur-2xl animate-fade-in-up max-h-[75vh] overflow-y-auto overscroll-contain"
+          style={{ top: `${headerHeight || 96}px` }}
+          className="lg:hidden fixed inset-x-0 bottom-0 z-40 bg-slate-950/98 backdrop-blur-3xl border-t border-white/10 text-white overflow-y-auto overscroll-contain animate-fade-in-up flex flex-col justify-between"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="flex items-center justify-between pb-2.5 mb-2 border-b border-white/10">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-              Danh mục & Điều hướng
-            </span>
-            <button
-              type="button"
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="flex items-center gap-1 rounded-full bg-white/10 px-2.5 py-1 text-xs font-semibold text-slate-200 hover:bg-white/20 hover:text-white transition"
-              aria-label="Đóng menu"
-            >
-              <FiX size={13} />
-              <span>Đóng</span>
-            </button>
-          </div>
-
-          <div className="space-y-1">
-            <NavLink
-              to="/"
-              end
-              onClick={() => setIsMobileMenuOpen(false)}
-              className={({ isActive }) =>
-                `block px-3 py-2 rounded-xl text-xs font-medium transition ${
-                  isActive ? "bg-white/15 text-white font-bold" : "text-slate-300 hover:bg-white/5"
-                }`
-              }
-            >
-              Trang chủ
-            </NavLink>
-
-            {navCatalog.map((cat) => {
-              const isExpanded = mobileExpandedCat === cat.name;
-              return (
-                <div key={cat.name} className="rounded-xl border border-white/10 bg-white/[0.03] overflow-hidden">
-                  <div className="flex items-stretch justify-between">
-                    <Link
-                      to={cat.to}
-                      onClick={() => setIsMobileMenuOpen(false)}
-                      className="flex-1 px-3 py-2.5 text-xs sm:text-sm font-bold text-white hover:text-blue-400 transition flex items-center justify-between"
-                    >
-                      {cat.name}
-                    </Link>
-                    <button
-                      type="button"
-                      onClick={() => setMobileExpandedCat(isExpanded ? null : cat.name)}
-                      className="px-3.5 py-2.5 text-slate-400 hover:text-white hover:bg-white/10 active:bg-white/15 flex items-center justify-center border-l border-white/5"
-                      aria-label={`Mở danh mục con của ${cat.name}`}
-                    >
-                      <FiChevronDown
-                        size={15}
-                        className={`transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`}
-                      />
-                    </button>
-                  </div>
-
-                  {isExpanded && (
-                    <div className="border-t border-white/5 bg-black/30 p-2 space-y-1 animate-fade-in-up">
+          {/* Main Navigation Tree */}
+          <div className="px-5 py-6">
+            <div className="space-y-1 divide-y divide-white/5">
+              {navCatalog.map((cat) => {
+                const isExpanded = mobileExpandedCat === cat.name;
+                return (
+                  <div key={cat.name} className="py-2.5">
+                    <div className="flex items-center justify-between">
                       <Link
                         to={cat.to}
-                        onClick={() => setIsMobileMenuOpen(false)}
-                        className="block px-3 py-1.5 text-xs font-semibold text-blue-400 hover:underline"
+                        onClick={() => {
+                          setIsMobileMenuOpen(false);
+                          setMobileExpandedCat(null);
+                        }}
+                        className="text-lg font-semibold tracking-tight text-white hover:text-blue-400 transition"
                       >
-                        • Xem tất cả {cat.name} →
+                        {cat.name}
                       </Link>
-                      {cat.subCategories.map((sub) => (
-                        <Link
-                          key={sub.name}
-                          to={sub.to}
-                          onClick={() => setIsMobileMenuOpen(false)}
-                          className="block px-3 py-1.5 text-xs text-slate-300 hover:text-white hover:bg-white/5 rounded-lg transition"
+                      {cat.subCategories?.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setMobileExpandedCat(isExpanded ? null : cat.name)}
+                          className="p-2 text-slate-400 hover:text-white transition"
+                          aria-label={`Mở rộng ${cat.name}`}
                         >
-                          {sub.name}
-                        </Link>
-                      ))}
+                          <FiChevronDown
+                            size={18}
+                            className={`transition-transform duration-200 ${
+                              isExpanded ? "rotate-180 text-white" : ""
+                            }`}
+                          />
+                        </button>
+                      )}
                     </div>
-                  )}
-                </div>
-              );
-            })}
 
-            <NavLink
-              to="/warranty"
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="block px-3 py-2 rounded-xl text-xs font-medium text-slate-300 hover:bg-white/5"
-            >
-              Chính sách bảo hành
-            </NavLink>
+                    {/* Subcategories list */}
+                    {isExpanded && cat.subCategories?.length > 0 && (
+                      <div className="mt-2.5 pl-3 border-l-2 border-blue-500/50 space-y-2 animate-fade-in-up">
+                        <Link
+                          to={cat.to}
+                          onClick={() => {
+                            setIsMobileMenuOpen(false);
+                            setMobileExpandedCat(null);
+                          }}
+                          className="flex items-center gap-1.5 text-xs font-bold text-blue-400 hover:text-blue-300 py-1"
+                        >
+                          <span>Xem tất cả {cat.name}</span>
+                          <FiArrowRight size={13} />
+                        </Link>
+                        {cat.subCategories.map((sub) => (
+                          <Link
+                            key={sub.name}
+                            to={sub.to}
+                            onClick={() => {
+                              setIsMobileMenuOpen(false);
+                              setMobileExpandedCat(null);
+                            }}
+                            className="block text-sm text-slate-300 hover:text-white transition py-1"
+                          >
+                            {sub.name}
+                          </Link>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
 
-            <NavLink
-              to="/about"
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="block px-3 py-2 rounded-xl text-xs font-medium text-slate-300 hover:bg-white/5"
-            >
-              Giới thiệu Ngọc Triết Store
-            </NavLink>
+            {/* Quick Services / Links */}
+            <div className="pt-6 mt-4 border-t border-white/10 space-y-3.5">
+              <NavLink
+                to="/warranty"
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  setMobileExpandedCat(null);
+                }}
+                className="flex items-center gap-3 text-sm font-medium text-slate-300 hover:text-white transition"
+              >
+                <FiShield className="text-blue-400" size={16} />
+                <span>Chính sách bảo hành 1 đổi 1</span>
+              </NavLink>
+
+              <NavLink
+                to="/about"
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  setMobileExpandedCat(null);
+                }}
+                className="flex items-center gap-3 text-sm font-medium text-slate-300 hover:text-white transition"
+              >
+                <FiInfo className="text-blue-400" size={16} />
+                <span>Giới thiệu Ngọc Triết Store</span>
+              </NavLink>
+
+              <a
+                href="tel:0922444444"
+                className="flex items-center gap-3 text-sm font-medium text-slate-300 hover:text-white transition"
+              >
+                <FiPhoneCall className="text-emerald-400" size={16} />
+                <span>
+                  Hotline hỗ trợ: <strong className="text-white">0922 444 444</strong>
+                </span>
+              </a>
+            </div>
           </div>
 
-          {!isAuthenticated && (
-            <div className="grid grid-cols-2 gap-2 mt-4 pt-4 border-t border-white/10">
-              <Link
-                to="/login"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="flex items-center justify-center rounded-full border border-white/20 py-2 text-xs font-medium text-slate-200 hover:bg-white/10"
-              >
-                Đăng nhập
-              </Link>
-              <Link
-                to="/register"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="flex items-center justify-center rounded-full bg-white text-slate-950 py-2 text-xs font-bold hover:bg-slate-200"
-              >
-                Đăng ký
-              </Link>
-            </div>
-          )}
+          {/* Bottom Section: Account info / Login / Register */}
+          <div className="px-5 py-5 border-t border-white/10 bg-black/40 backdrop-blur-md">
+            {isAuthenticated && user ? (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-slate-400">Tài khoản</p>
+                    <p className="text-sm font-bold text-white truncate">{user.name || user.email}</p>
+                  </div>
+                  {tierLabel && (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30 uppercase">
+                      {tierLabel}
+                    </span>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  <Link
+                    to="/orders"
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      setMobileExpandedCat(null);
+                    }}
+                    className="flex items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-white/5 py-2 text-xs font-semibold text-slate-200 hover:bg-white/10 transition"
+                  >
+                    <FiPackage size={14} />
+                    <span>Đơn hàng</span>
+                  </Link>
+                  {isAdmin && (
+                    <Link
+                      to="/admin"
+                      onClick={() => {
+                        setIsMobileMenuOpen(false);
+                        setMobileExpandedCat(null);
+                      }}
+                      className="flex items-center justify-center rounded-xl bg-blue-600/30 border border-blue-500/40 py-2 text-xs font-bold text-blue-300 hover:bg-blue-600/40 transition"
+                    >
+                      Quản trị
+                    </Link>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      logout();
+                      setIsMobileMenuOpen(false);
+                      setMobileExpandedCat(null);
+                    }}
+                    className={`${
+                      isAdmin ? "col-span-2" : "col-span-1"
+                    } flex items-center justify-center gap-1.5 rounded-xl border border-rose-500/20 bg-rose-500/10 py-2 text-xs font-semibold text-rose-400 hover:bg-rose-500/20 transition`}
+                  >
+                    <FiLogOut size={14} />
+                    <span>Đăng xuất</span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-xs text-slate-400 text-center mb-2">Tài khoản & Mua sắm</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <Link
+                    to="/login"
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      setMobileExpandedCat(null);
+                    }}
+                    className="flex items-center justify-center rounded-xl border border-white/20 bg-white/5 py-2.5 text-xs font-semibold text-white hover:bg-white/10 active:scale-95 transition"
+                  >
+                    Đăng nhập
+                  </Link>
+                  <Link
+                    to="/register"
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      setMobileExpandedCat(null);
+                    }}
+                    className="flex items-center justify-center rounded-xl bg-blue-600 py-2.5 text-xs font-bold text-white hover:bg-blue-500 active:scale-95 transition shadow-lg shadow-blue-600/30"
+                  >
+                    Đăng ký
+                  </Link>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </header>

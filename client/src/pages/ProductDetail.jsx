@@ -105,6 +105,34 @@ const ProductDetail = () => {
     return Array.isArray(fallback?.variants) ? fallback.variants : [];
   }, [product?.variants, product?.slug, slug]);
 
+  const colors = useMemo(() => {
+    if (Array.isArray(product?.options?.colors) && product.options.colors.length > 0) {
+      return product.options.colors;
+    }
+    const fallback = FALLBACK_PRODUCTS.find(
+      (p) => p.slug === slug || p.slug === product?.slug
+    );
+    if (Array.isArray(fallback?.options?.colors) && fallback.options.colors.length > 0) {
+      return fallback.options.colors;
+    }
+    const fromVariants = [...new Set(variantList.map((v) => v.color).filter(Boolean))];
+    return fromVariants;
+  }, [product?.options?.colors, product?.slug, slug, variantList]);
+
+  const capacities = useMemo(() => {
+    if (Array.isArray(product?.options?.capacities) && product.options.capacities.length > 0) {
+      return product.options.capacities;
+    }
+    const fallback = FALLBACK_PRODUCTS.find(
+      (p) => p.slug === slug || p.slug === product?.slug
+    );
+    if (Array.isArray(fallback?.options?.capacities) && fallback.options.capacities.length > 0) {
+      return fallback.options.capacities;
+    }
+    const fromVariants = [...new Set(variantList.map((v) => v.capacity).filter(Boolean))];
+    return fromVariants;
+  }, [product?.options?.capacities, product?.slug, slug, variantList]);
+
   const {
     capacitiesByColor,
     colorsByCapacity,
@@ -216,34 +244,6 @@ const ProductDetail = () => {
       active = false;
     };
   }, [slug]);
-
-  const colors = useMemo(() => {
-    if (Array.isArray(product?.options?.colors) && product.options.colors.length > 0) {
-      return product.options.colors;
-    }
-    const fallback = FALLBACK_PRODUCTS.find(
-      (p) => p.slug === slug || p.slug === product?.slug
-    );
-    if (Array.isArray(fallback?.options?.colors) && fallback.options.colors.length > 0) {
-      return fallback.options.colors;
-    }
-    const fromVariants = [...new Set(variantList.map((v) => v.color).filter(Boolean))];
-    return fromVariants;
-  }, [product?.options?.colors, product?.slug, slug, variantList]);
-
-  const capacities = useMemo(() => {
-    if (Array.isArray(product?.options?.capacities) && product.options.capacities.length > 0) {
-      return product.options.capacities;
-    }
-    const fallback = FALLBACK_PRODUCTS.find(
-      (p) => p.slug === slug || p.slug === product?.slug
-    );
-    if (Array.isArray(fallback?.options?.capacities) && fallback.options.capacities.length > 0) {
-      return fallback.options.capacities;
-    }
-    const fromVariants = [...new Set(variantList.map((v) => v.capacity).filter(Boolean))];
-    return fromVariants;
-  }, [product?.options?.capacities, product?.slug, slug, variantList]);
 
   useEffect(() => {
     if (!selectedColor || lastSelectedOption === "capacity") {
