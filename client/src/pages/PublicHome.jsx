@@ -470,7 +470,7 @@ const PublicHome = () => {
               key={feature.title}
               className="rounded-xl sm:rounded-2xl border border-slate-200/80 bg-white p-2.5 sm:p-5 text-center sm:text-left shadow-sm"
             >
-              <h3 className="text-xs sm:text-base font-bold text-slate-900 truncate">
+              <h3 className="text-[11px] sm:text-base font-bold text-slate-900 leading-tight">
                 {feature.title}
               </h3>
               <p className="hidden sm:block mt-1 text-xs text-slate-500 line-clamp-1">{feature.subtitle}</p>
@@ -600,7 +600,7 @@ const PublicHome = () => {
                     </span>
                   </div>
 
-                  <h3 className="text-base sm:text-2xl lg:text-3xl font-extrabold text-white tracking-tight line-clamp-1 sm:line-clamp-none">
+                  <h3 className="text-sm sm:text-2xl lg:text-3xl font-extrabold text-white tracking-tight line-clamp-2 leading-snug">
                     {targetFeaturedTitle}
                   </h3>
 

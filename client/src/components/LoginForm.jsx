@@ -49,7 +49,7 @@ const LoginForm = () => {
             required
             autoComplete="username"
             placeholder="admin@example.com hoặc tên tài khoản"
-            className="w-full rounded-xl border border-slate-700/80 bg-slate-950/80 py-3 pl-10 pr-4 text-sm text-white placeholder-slate-500 outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30"
+            className="w-full rounded-xl border border-slate-700/80 bg-slate-950/80 py-3 pl-10 pr-4 text-base sm:text-sm text-white placeholder-slate-500 outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30"
           />
         </div>
       </div>
@@ -71,7 +71,7 @@ const LoginForm = () => {
             required
             autoComplete="current-password"
             placeholder="••••••••"
-            className="w-full rounded-xl border border-slate-700/80 bg-slate-950/80 py-3 pl-10 pr-11 text-sm text-white placeholder-slate-500 outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30"
+            className="w-full rounded-xl border border-slate-700/80 bg-slate-950/80 py-3 pl-10 pr-11 text-base sm:text-sm text-white placeholder-slate-500 outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30"
           />
           <button
             type="button"

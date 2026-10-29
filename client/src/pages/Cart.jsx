@@ -47,7 +47,7 @@ const Cart = () => {
   }
 
   return (
-    <div className="container-safe py-12">
+    <div className="container-safe py-6 sm:py-12">
       <h1 className="text-3xl font-bold text-slate-900">Giỏ hàng</h1>
       <p className="mt-2 text-sm text-slate-500">
         Bạn có {totalQuantity} sản phẩm sẵn sàng thanh toán.
@@ -66,10 +66,10 @@ const Cart = () => {
                     item.image || "https://placehold.co/120x120?text=No+Image"
                   }
                   alt={item.name}
-                  className="h-24 w-24 rounded-lg bg-slate-100 object-contain"
+                  className="h-20 w-20 sm:h-24 sm:w-24 shrink-0 rounded-xl bg-slate-100 object-contain p-1.5"
                 />
                 <div>
-                  <h3 className="text-base font-semibold text-slate-900">
+                  <h3 className="text-sm sm:text-base font-bold text-slate-900 line-clamp-2">
                     {item.name}
                   </h3>
                   {(item.color || item.capacity) && (

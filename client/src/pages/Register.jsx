@@ -69,7 +69,7 @@ const Register = () => {
       </div>
 
       {/* Floating Back Button */}
-      <div className="absolute left-6 top-6 z-20">
+      <div className="absolute left-4 top-4 sm:left-6 sm:top-6 z-20">
         <BackButton
           fallback="/"
           variant="dark"
@@ -81,7 +81,7 @@ const Register = () => {
 
       {/* Centered Register Card */}
       <div className="relative z-10 w-full max-w-lg animate-fade-in-up">
-        <div className="rounded-3xl border border-slate-800/80 bg-slate-900/70 p-8 sm:p-10 shadow-2xl backdrop-blur-2xl">
+        <div className="rounded-2xl sm:rounded-3xl border border-slate-800/80 bg-slate-900/70 p-5 sm:p-10 shadow-2xl backdrop-blur-2xl">
           {/* Logo & Header */}
           <div className="flex flex-col items-center text-center">
             <Link to="/" className="group mb-5 flex flex-col items-center">
@@ -121,7 +121,7 @@ const Register = () => {
                     onChange={handleChange}
                     required
                     placeholder="Nguyễn Văn A"
-                    className="w-full rounded-xl border border-slate-700/80 bg-slate-950/80 py-3 pl-10 pr-3 text-sm text-white placeholder-slate-500 outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30"
+                    className="w-full rounded-xl border border-slate-700/80 bg-slate-950/80 py-3 pl-10 pr-3 text-base sm:text-sm text-white placeholder-slate-500 outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30"
                   />
                 </div>
               </div>
@@ -142,7 +142,7 @@ const Register = () => {
                     onChange={handleChange}
                     required
                     placeholder="username"
-                    className="w-full rounded-xl border border-slate-700/80 bg-slate-950/80 py-3 pl-9 pr-3 text-sm text-white placeholder-slate-500 outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30"
+                    className="w-full rounded-xl border border-slate-700/80 bg-slate-950/80 py-3 pl-9 pr-3 text-base sm:text-sm text-white placeholder-slate-500 outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30"
                   />
                 </div>
               </div>
@@ -165,7 +165,7 @@ const Register = () => {
                   onChange={handleChange}
                   required
                   placeholder="name@example.com"
-                  className="w-full rounded-xl border border-slate-700/80 bg-slate-950/80 py-3 pl-10 pr-4 text-sm text-white placeholder-slate-500 outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30"
+                  className="w-full rounded-xl border border-slate-700/80 bg-slate-950/80 py-3 pl-10 pr-4 text-base sm:text-sm text-white placeholder-slate-500 outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30"
                 />
               </div>
             </div>
@@ -187,7 +187,7 @@ const Register = () => {
                   onChange={handleChange}
                   required
                   placeholder="••••••••"
-                  className="w-full rounded-xl border border-slate-700/80 bg-slate-950/80 py-3 pl-10 pr-11 text-sm text-white placeholder-slate-500 outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30"
+                  className="w-full rounded-xl border border-slate-700/80 bg-slate-950/80 py-3 pl-10 pr-11 text-base sm:text-sm text-white placeholder-slate-500 outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30"
                 />
                 <button
                   type="button"

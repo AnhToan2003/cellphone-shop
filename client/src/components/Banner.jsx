@@ -104,7 +104,7 @@ const Banner = ({ slides, autoPlay = true, interval = 6000, onSlideNavigate }) =
               </span>
             </div>
 
-            <h1 className="text-base sm:text-2xl lg:text-3xl font-extrabold text-white tracking-tight line-clamp-1 sm:line-clamp-none">
+            <h1 className="text-sm sm:text-2xl lg:text-3xl font-extrabold text-white tracking-tight line-clamp-2 leading-snug">
               {currentSlide.title}
             </h1>
 

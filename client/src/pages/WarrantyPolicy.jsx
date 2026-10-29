@@ -156,10 +156,10 @@ const WarrantyPolicy = () => {
   }, [items, filter]);
 
   return (
-    <div className="min-h-screen bg-slate-50 py-10 font-sans dark:bg-slate-950">
+    <div className="min-h-screen bg-slate-50 py-6 sm:py-10 font-sans dark:bg-slate-950">
       <div className="container-safe space-y-10">
         {/* HERO LOOKUP BANNER */}
-        <div className="relative overflow-hidden rounded-3xl border border-slate-200 bg-gradient-to-br from-slate-900 via-slate-900 to-blue-950 p-6 sm:p-10 text-white shadow-2xl dark:border-slate-800">
+        <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl border border-slate-200 bg-gradient-to-br from-slate-900 via-slate-900 to-blue-950 p-4 sm:p-10 text-white shadow-2xl dark:border-slate-800">
           <div className="relative z-10 max-w-3xl space-y-4">
             <div className="inline-flex items-center gap-2 rounded-full border border-blue-500/30 bg-blue-500/10 px-3.5 py-1 text-xs font-bold uppercase tracking-widest text-blue-400">
               <FiShield size={14} />
@@ -235,7 +235,7 @@ const WarrantyPolicy = () => {
               </div>
 
               {/* Status Filter Buttons */}
-              <div className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-100 p-1 dark:border-slate-800 dark:bg-slate-950">
+              <div className="flex flex-wrap items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-100 p-1 dark:border-slate-800 dark:bg-slate-950">
                 <button
                   type="button"
                   onClick={() => setFilter("all")}

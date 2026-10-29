@@ -27,7 +27,7 @@ const Login = () => {
       </div>
 
       {/* Floating Back Button */}
-      <div className="absolute left-6 top-6 z-20">
+      <div className="absolute left-4 top-4 sm:left-6 sm:top-6 z-20">
         <BackButton
           fallback="/"
           variant="dark"
@@ -39,7 +39,7 @@ const Login = () => {
 
       {/* Centered Login Card */}
       <div className="relative z-10 w-full max-w-md animate-fade-in-up">
-        <div className="rounded-3xl border border-slate-800/80 bg-slate-900/70 p-8 sm:p-10 shadow-2xl backdrop-blur-2xl">
+        <div className="rounded-2xl sm:rounded-3xl border border-slate-800/80 bg-slate-900/70 p-5 sm:p-10 shadow-2xl backdrop-blur-2xl">
           {/* Logo & Header */}
           <div className="flex flex-col items-center text-center">
             <Link to="/" className="group mb-5 flex flex-col items-center">

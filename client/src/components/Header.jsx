@@ -228,7 +228,7 @@ export default function Header() {
   return (
     <header
       ref={headerRef}
-      className="sticky top-0 z-40 w-full transition-all duration-300"
+      className="sticky top-0 z-40 w-full transition-all duration-300 pt-[env(safe-area-inset-top,0px)] bg-slate-950"
       onMouseLeave={handleMouseLeaveNav}
     >
       {/* Main Apple-style Minimalist Header */}

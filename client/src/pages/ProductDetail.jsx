@@ -618,7 +618,7 @@ const ProductDetail = () => {
     .filter(Boolean);
 
   return (
-    <div className="container-safe py-12">
+    <div className="container-safe py-4 sm:py-12">
       <BackButton
         wrapperClassName="mb-4"
         variant="neutral"
@@ -642,7 +642,7 @@ const ProductDetail = () => {
                 getProductImage(product, PRODUCT_IMAGE_PLACEHOLDER)
               }
               alt={product.name}
-              className="mx-auto h-96 w-full max-w-full object-contain"
+              className="mx-auto h-64 sm:h-96 w-full max-w-full object-contain"
             />
           </div>
           {galleryImages.length > 1 && (
@@ -671,7 +671,7 @@ const ProductDetail = () => {
         </div>
 
         <div className="min-w-0">
-          <h1 className="break-words text-3xl font-bold text-slate-900">{product.name}</h1>
+          <h1 className="break-words text-xl sm:text-3xl font-extrabold text-slate-900">{product.name}</h1>
           <p className="mt-2 text-sm uppercase tracking-wide text-slate-400">
             {product.brand}
           </p>
@@ -691,9 +691,9 @@ const ProductDetail = () => {
             <span>{availableStock > 0 ? "Còn hàng" : "Hết hàng"}</span>
           </div>
 
-          <div className="mt-6 rounded-2xl bg-white p-6 shadow">
+          <div className="mt-4 sm:mt-6 rounded-2xl bg-white p-4 sm:p-6 shadow-sm">
             <div className="flex flex-wrap items-baseline gap-3">
-              <p className="text-3xl font-extrabold text-slate-900">
+              <p className="text-2xl sm:text-3xl font-extrabold text-slate-900">
                 {currency(finalPrice)}
               </p>
               {comparePrice > finalPrice && (
@@ -719,7 +719,7 @@ const ProductDetail = () => {
             )}
           </div>
 
-          <div className="mt-6 space-y-6 rounded-2xl bg-white p-6 shadow">
+          <div className="mt-4 sm:mt-6 space-y-5 rounded-2xl bg-white p-4 sm:p-6 shadow-sm">
             {colors.length > 0 && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
