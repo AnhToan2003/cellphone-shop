@@ -4,6 +4,7 @@ import { useSearchParams } from "react-router-dom";
 import ProductCard from "../components/ProductCard.jsx";
 import SkeletonCard from "../components/SkeletonCard.jsx";
 import BackButton from "../components/BackButton.jsx";
+import { FiChevronLeft, FiChevronRight } from "react-icons/fi";
 import { fetchPublicProducts, fetchPublicCategories } from "../services/api.js";
 
 const PAGE_SIZE = 24;
@@ -442,46 +443,63 @@ const AllProducts = () => {
 
           {/* Pagination */}
           {pageInfo.totalPages > 1 && (
-            <div className="mt-8 flex flex-col items-center justify-between gap-4 border-t border-slate-100 pt-6 sm:flex-row">
-              <span className="text-xs text-slate-500 font-medium">
-                Trang {pageInfo.current} / {pageInfo.totalPages}
-              </span>
-              <div className="flex gap-2">
+            <div className="mt-4 sm:mt-6 flex justify-center">
+              <nav
+                aria-label="Phân trang sản phẩm"
+                className="inline-flex items-center gap-1 sm:gap-1.5 rounded-full border border-slate-200/90 bg-white/95 px-2 py-1 sm:px-3 sm:py-1.5 shadow-sm backdrop-blur-sm"
+              >
                 <button
                   type="button"
                   disabled={pageInfo.current <= 1 || loading}
                   onClick={() => goToPage(pageInfo.current - 1)}
-                  className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                  aria-label="Trang trước"
+                  className={`flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full border text-xs sm:text-sm font-bold transition active:scale-95 ${
+                    pageInfo.current <= 1 || loading
+                      ? "cursor-not-allowed border-transparent bg-slate-50 text-slate-300"
+                      : "border-slate-200 bg-white text-slate-700 hover:border-blue-600 hover:text-blue-600 hover:bg-blue-50/50"
+                  }`}
                 >
-                  Trang trước
+                  <FiChevronLeft size={15} />
                 </button>
-                {Array.from({ length: pageInfo.totalPages }).map((_, idx) => {
-                  const pNum = idx + 1;
-                  return (
-                    <button
-                      key={pNum}
-                      type="button"
-                      disabled={loading}
-                      onClick={() => goToPage(pNum)}
-                      className={`h-8 w-8 rounded-lg text-xs font-bold transition ${
-                        pNum === pageInfo.current
-                          ? "bg-slate-900 text-white shadow-sm"
-                          : "border border-slate-200 text-slate-700 hover:bg-slate-50"
-                      }`}
-                    >
-                      {pNum}
-                    </button>
-                  );
-                })}
+
+                <div className="flex items-center gap-1 sm:gap-1.5">
+                  {Array.from({ length: pageInfo.totalPages }).map((_, idx) => {
+                    const pNum = idx + 1;
+                    const isCurrent = pNum === pageInfo.current;
+                    return (
+                      <button
+                        key={pNum}
+                        type="button"
+                        disabled={loading}
+                        onClick={() => goToPage(pNum)}
+                        aria-label={`Trang ${pNum}`}
+                        aria-current={isCurrent ? "page" : undefined}
+                        className={`flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full text-xs sm:text-sm font-bold transition active:scale-95 ${
+                          isCurrent
+                            ? "bg-slate-950 text-white shadow-sm"
+                            : "border border-slate-200 bg-white text-slate-700 hover:border-slate-400 hover:bg-slate-50"
+                        }`}
+                      >
+                        {pNum}
+                      </button>
+                    );
+                  })}
+                </div>
+
                 <button
                   type="button"
                   disabled={pageInfo.current >= pageInfo.totalPages || loading}
                   onClick={() => goToPage(pageInfo.current + 1)}
-                  className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                  aria-label="Trang sau"
+                  className={`flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full border text-xs sm:text-sm font-bold transition active:scale-95 ${
+                    pageInfo.current >= pageInfo.totalPages || loading
+                      ? "cursor-not-allowed border-transparent bg-slate-50 text-slate-300"
+                      : "border-slate-200 bg-white text-slate-700 hover:border-blue-600 hover:text-blue-600 hover:bg-blue-50/50"
+                  }`}
                 >
-                  Trang sau
+                  <FiChevronRight size={15} />
                 </button>
-              </div>
+              </nav>
             </div>
           )}
         </section>

@@ -10,6 +10,7 @@ import { normalizeText } from "../utils/text.js";
 import { getProductImage, getAssetUrl } from "../utils/assets.js";
 import { apiClient } from "../api/axios.js";
 import { fetchPublicCategories } from "../services/api.js";
+import { FiChevronLeft, FiChevronRight } from "react-icons/fi";
 
 const HERO_FALLBACK =
   "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=1400&q=80";
@@ -733,53 +734,62 @@ const PublicHome = () => {
             </div>
           )}
           {showPagination ? (
-            <div className="mt-10 flex flex-col items-center gap-4 rounded-3xl border border-slate-200 bg-white/80 px-4 py-4 shadow-sm sm:flex-row sm:justify-between">
-              <button
-                type="button"
-                onClick={() => handlePageChange(currentPage - 1)}
-                disabled={!hasPrevPage || gridIsLoading}
-                className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition ${
-                  !hasPrevPage || gridIsLoading
-                    ? "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400"
-                    : "border-slate-200 bg-white text-slate-600 hover:border-brand-primary hover:text-brand-primary"
-                }`}
+            <div className="mt-4 sm:mt-6 flex justify-center">
+              <nav
+                aria-label="Phân trang sản phẩm"
+                className="inline-flex items-center gap-1 sm:gap-1.5 rounded-full border border-slate-200/90 bg-white/95 px-2 py-1 sm:px-3 sm:py-1.5 shadow-sm backdrop-blur-sm"
               >
-                Trang trước
-              </button>
-              <div className="flex flex-col items-center gap-3 sm:flex-row sm:gap-4">
-                <span className="text-sm font-medium text-slate-500">
-                  Trang {displayPage}/{totalPages}
-                </span>
-                <div className="flex flex-wrap items-center justify-center gap-2">
-                  {pageButtons.map((pageNumber) => (
-                    <button
-                      type="button"
-                      key={pageNumber}
-                      onClick={() => handlePageChange(pageNumber)}
-                      disabled={gridIsLoading && pageNumber === currentPage}
-                      className={`h-10 w-10 rounded-full border text-sm font-semibold transition ${
-                        pageNumber === displayPage
-                          ? "border-brand-primary bg-brand-primary text-white shadow-sm"
-                          : "border-slate-200 bg-white text-slate-600 hover:border-brand-primary hover:text-brand-primary"
-                      } ${gridIsLoading && pageNumber === currentPage ? "cursor-wait opacity-70" : ""}`}
-                    >
-                      {pageNumber}
-                    </button>
-                  ))}
+                <button
+                  type="button"
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={!hasPrevPage || gridIsLoading}
+                  aria-label="Trang trước"
+                  className={`flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full border text-xs sm:text-sm font-bold transition active:scale-95 ${
+                    !hasPrevPage || gridIsLoading
+                      ? "cursor-not-allowed border-transparent bg-slate-50 text-slate-300"
+                      : "border-slate-200 bg-white text-slate-700 hover:border-blue-600 hover:text-blue-600 hover:bg-blue-50/50"
+                  }`}
+                >
+                  <FiChevronLeft size={15} />
+                </button>
+
+                <div className="flex items-center gap-1 sm:gap-1.5">
+                  {pageButtons.map((pageNumber) => {
+                    const isCurrent = pageNumber === displayPage;
+                    return (
+                      <button
+                        type="button"
+                        key={pageNumber}
+                        onClick={() => handlePageChange(pageNumber)}
+                        disabled={gridIsLoading && isCurrent}
+                        aria-label={`Trang ${pageNumber}`}
+                        aria-current={isCurrent ? "page" : undefined}
+                        className={`flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full text-xs sm:text-sm font-bold transition active:scale-95 ${
+                          isCurrent
+                            ? "bg-slate-950 text-white shadow-sm"
+                            : "border border-slate-200 bg-white text-slate-700 hover:border-slate-400 hover:bg-slate-50"
+                        } ${gridIsLoading && isCurrent ? "cursor-wait opacity-70" : ""}`}
+                      >
+                        {pageNumber}
+                      </button>
+                    );
+                  })}
                 </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => handlePageChange(currentPage + 1)}
-                disabled={!hasNextPage || gridIsLoading}
-                className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition ${
-                  !hasNextPage || gridIsLoading
-                    ? "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400"
-                    : "border-slate-200 bg-white text-slate-600 hover:border-brand-primary hover:text-brand-primary"
-                }`}
-              >
-                Trang sau
-              </button>
+
+                <button
+                  type="button"
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={!hasNextPage || gridIsLoading}
+                  aria-label="Trang sau"
+                  className={`flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full border text-xs sm:text-sm font-bold transition active:scale-95 ${
+                    !hasNextPage || gridIsLoading
+                      ? "cursor-not-allowed border-transparent bg-slate-50 text-slate-300"
+                      : "border-slate-200 bg-white text-slate-700 hover:border-blue-600 hover:text-blue-600 hover:bg-blue-50/50"
+                  }`}
+                >
+                  <FiChevronRight size={15} />
+                </button>
+              </nav>
             </div>
           ) : null}
         </section>
