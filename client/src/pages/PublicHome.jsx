@@ -195,6 +195,16 @@ const FALLBACK_BANNER = {
   ctaLabel: "Xem sản phẩm",
 };
 
+const loadCachedData = (key, fallback) => {
+  if (typeof window === "undefined") return fallback;
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
+  } catch {
+    return fallback;
+  }
+};
+
 const normalizeBanner = (raw, index = 0) => {
   if (!raw || typeof raw !== "object") {
     return { id: `fallback-${index}`, ...FALLBACK_BANNER };
@@ -224,11 +234,11 @@ const PublicHome = () => {
     (state) => state.products
   );
 
-  const [bannerSlides, setBannerSlides] = useState([normalizeBanner(null)]);
+  const [bannerSlides, setBannerSlides] = useState(() => loadCachedData("nts_cached_banners_v1", [normalizeBanner(null)]));
   const [searchInput, setSearchInput] = useState(storeFilters.search || "");
   const [sortOption, setSortOption] = useState("popular");
   const [selectedSubCategory, setSelectedSubCategory] = useState("");
-  const [categoriesList, setCategoriesList] = useState(APPLE_FULL_CATALOG);
+  const [categoriesList, setCategoriesList] = useState(() => loadCachedData("nts_cached_categories_v1", APPLE_FULL_CATALOG));
   const currentPage = storeFilters.page || 1;
   const totalPages = pagination?.totalPages || 1;
   const displayPage = Math.min(currentPage, totalPages);
@@ -270,6 +280,9 @@ const PublicHome = () => {
 
         if (nextSlides.length) {
           setBannerSlides(nextSlides);
+          try {
+            localStorage.setItem("nts_cached_banners_v1", JSON.stringify(nextSlides));
+          } catch {}
         } else {
           const fallbackSource = data?.featured || data;
           setBannerSlides([normalizeBanner(fallbackSource, 0)]);
@@ -303,6 +316,9 @@ const PublicHome = () => {
             })),
           ];
           setCategoriesList(dynamic);
+          try {
+            localStorage.setItem("nts_cached_categories_v1", JSON.stringify(dynamic));
+          } catch {}
         }
       } catch {
         // keep fallback
@@ -363,7 +379,7 @@ const PublicHome = () => {
     [filteredProducts, sortOption]
   );
 
-  const [spotlightConfig, setSpotlightConfig] = useState(null);
+  const [spotlightConfig, setSpotlightConfig] = useState(() => loadCachedData("nts_cached_spotlight_v1", null));
 
   useEffect(() => {
     apiClient
@@ -371,6 +387,9 @@ const PublicHome = () => {
       .then((res) => {
         if (res.data?.data) {
           setSpotlightConfig(res.data.data);
+          try {
+            localStorage.setItem("nts_cached_spotlight_v1", JSON.stringify(res.data.data));
+          } catch {}
         }
       })
       .catch(() => {});
@@ -418,7 +437,7 @@ const PublicHome = () => {
     "Sở hữu ngay flagship mới nhất với ưu đãi đặc quyền và bảo hành chu đáo tại Ngọc Triết Store.";
 
   const isLoading = status === "loading";
-  const gridIsLoading = isLoading;
+  const gridIsLoading = isLoading && items.length === 0;
   const showPagination = totalPages > 1;
 
   return (

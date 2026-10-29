@@ -76,7 +76,21 @@ const AllProducts = () => {
   const [page, setPage] = useState(initialPage);
   const [sort, setSort] = useState(searchParams.get("sort") || "");
   const [categoriesList, setCategoriesList] = useState(APPLE_CATEGORIES);
-  const [products, setProducts] = useState([]);
+  const [products, setProducts] = useState(() => {
+    if (!initialSearch && !initialCategory && !initialSubCategory && initialPage === 1) {
+      if (typeof window !== "undefined") {
+        try {
+          const raw = localStorage.getItem("nts_cached_products_v1");
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed?.items) && parsed.items.length > 0) return parsed.items;
+          }
+        } catch {}
+      }
+      return FALLBACK_PRODUCTS;
+    }
+    return [];
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [meta, setMeta] = useState({ total: 0, totalPages: 1 });
@@ -169,6 +183,11 @@ const AllProducts = () => {
           ? response.data.data
           : [];
         setProducts(items);
+        if (page === 1 && !search && !category && !subCategory && items.length > 0 && typeof window !== "undefined") {
+          try {
+            localStorage.setItem("nts_cached_products_v1", JSON.stringify({ items, pagination: response.data?.pagination }));
+          } catch {}
+        }
         const metaPayload = response.data?.pagination || response.data?.meta || {};
         const totalItems = metaPayload.totalItems ?? metaPayload.total ?? items.length;
         setMeta({
@@ -376,7 +395,7 @@ const AllProducts = () => {
 
           {/* Product Grid */}
           <div className="mt-6">
-            {loading ? (
+            {loading && products.length === 0 ? (
               <div className="grid grid-cols-2 gap-2.5 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4">
                 {Array.from({ length: 8 }).map((_, index) => (
                   <div key={`skeleton-${index}`} className="min-w-0">

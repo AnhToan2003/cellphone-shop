@@ -1,6 +1,7 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 
 import { apiClient } from "../../api/axios.js";
+import { FALLBACK_PRODUCTS } from "../../data/fallbackProducts.js";
 
 export const fetchProducts = createAsyncThunk(
   "products/list",
@@ -38,16 +39,46 @@ export const fetchProductBySlug = createAsyncThunk(
   }
 );
 
+const getInitialCachedProducts = () => {
+  if (typeof window !== "undefined") {
+    try {
+      const raw = localStorage.getItem("nts_cached_products_v1");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed?.items) && parsed.items.length > 0) {
+          return {
+            items: parsed.items,
+            pagination: parsed.pagination || {
+              page: 1,
+              totalPages: 1,
+              totalItems: parsed.items.length,
+              limit: 12,
+            },
+          };
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }
+  return {
+    items: FALLBACK_PRODUCTS,
+    pagination: {
+      page: 1,
+      totalPages: 1,
+      totalItems: FALLBACK_PRODUCTS.length,
+      limit: 12,
+    },
+  };
+};
+
+const cachedInitial = getInitialCachedProducts();
+
 const initialState = {
-  items: [],
+  items: cachedInitial.items,
   status: "idle",
   error: null,
-  pagination: {
-    page: 1,
-    totalPages: 1,
-    totalItems: 0,
-    limit: 12,
-  },
+  pagination: cachedInitial.pagination,
   selected: null,
   selectedStatus: "idle",
   filters: {
@@ -105,6 +136,29 @@ const productSlice = createSlice({
         state.items = action.payload.data;
         if (action.payload.pagination) {
           state.pagination = action.payload.pagination;
+        }
+
+        // Cache default page 1 for instant 0ms subsequent renders
+        if (
+          state.filters.page === 1 &&
+          !state.filters.search &&
+          !state.filters.category &&
+          !state.filters.brand &&
+          Array.isArray(action.payload.data) &&
+          action.payload.data.length > 0 &&
+          typeof window !== "undefined"
+        ) {
+          try {
+            localStorage.setItem(
+              "nts_cached_products_v1",
+              JSON.stringify({
+                items: action.payload.data,
+                pagination: action.payload.pagination,
+              })
+            );
+          } catch {
+            // ignore localStorage quota errors
+          }
         }
       })
       .addCase(fetchProducts.rejected, (state, action) => {

@@ -38,6 +38,7 @@ export const getSpotlight = async (req, res, next) => {
       }
     }
 
+    res.set("Cache-Control", "public, max-age=60, s-maxage=300, stale-while-revalidate=86400");
     res.json({
       success: true,
       data: spotlight,

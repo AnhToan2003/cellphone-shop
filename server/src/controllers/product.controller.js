@@ -205,6 +205,10 @@ export const listProducts = asyncHandler(async (req, res) => {
     applyPricingToProduct(item, { promotions, customerTier })
   );
 
+  if (!req.user) {
+    res.set("Cache-Control", "public, max-age=15, s-maxage=120, stale-while-revalidate=86400");
+  }
+
   res.json({
     success: true,
     data: enrichedItems,
@@ -235,6 +239,10 @@ export const getProductBySlug = asyncHandler(async (req, res) => {
     promotions,
     customerTier,
   });
+
+  if (!req.user) {
+    res.set("Cache-Control", "public, max-age=30, s-maxage=180, stale-while-revalidate=86400");
+  }
 
   res.json({
     success: true,

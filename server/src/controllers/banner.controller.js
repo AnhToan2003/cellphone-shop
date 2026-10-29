@@ -30,6 +30,7 @@ export const getBanners = async (req, res, next) => {
     const banners = await Banner.find().sort({ createdAt: -1 });
     const featured = buildFeaturedBanner(banners?.[0]);
 
+    res.set("Cache-Control", "public, max-age=60, s-maxage=300, stale-while-revalidate=86400");
     res.json({
       success: true,
       data: banners,

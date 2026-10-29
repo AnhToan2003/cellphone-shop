@@ -12,8 +12,8 @@ const formatResponse = (data) => ({
 
 export const listCategories = asyncHandler(async (_req, res) => {
   const categories = await Category.find({ isActive: true })
-    .sort({ order: 1, name: 1 })
-    .lean();
+    .sort({ order: 1, name: 1 }).lean();
+  res.set("Cache-Control", "public, max-age=60, s-maxage=300, stale-while-revalidate=86400");
   res.json(formatResponse(categories));
 });
 

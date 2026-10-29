@@ -7,7 +7,12 @@ let preparation;
 const prepareApplication = () => {
   if (!preparation) {
     preparation = connectDB()
-      .then(() => ensureReviewIndexes())
+      .then(() => {
+        // Fire index maintenance in background without blocking responses
+        ensureReviewIndexes().catch((err) => {
+          console.warn("Index maintenance background warning:", err.message);
+        });
+      })
       .catch((error) => {
         preparation = null;
         throw error;
@@ -17,6 +22,15 @@ const prepareApplication = () => {
 };
 
 export default async function handler(request, response) {
+  // Rapid preflight response
+  if (request.method === "OPTIONS") {
+    response.setHeader("Access-Control-Allow-Origin", request.headers.origin || "*");
+    response.setHeader("Access-Control-Allow-Methods", "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS");
+    response.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Accept");
+    response.setHeader("Access-Control-Allow-Credentials", "true");
+    return response.status(204).end();
+  }
+
   try {
     // Vercel's non-framework file routes don't forward arbitrary nested paths
     // through this catch-all. vercel.json rewrites them through /api/express and
@@ -36,9 +50,11 @@ export default async function handler(request, response) {
     return app(request, response);
   } catch (error) {
     console.error("Serverless API initialization failed:", error.message);
+    response.setHeader("Access-Control-Allow-Origin", request.headers.origin || "*");
+    response.setHeader("Access-Control-Allow-Credentials", "true");
     return response.status(503).json({
       success: false,
-      message: "Dịch vụ đang khởi động hoặc cấu hình cơ sở dữ liệu chưa sẵn sàng.",
+      message: "Dịch vụ đang khởi động hoặc cơ sở dữ liệu đang kết nối, vui lòng thử lại.",
     });
   }
 }
