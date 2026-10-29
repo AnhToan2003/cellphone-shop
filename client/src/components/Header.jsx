@@ -222,12 +222,13 @@ export default function Header() {
   // Lock background scroll when mobile curtain is open
   useEffect(() => {
     if (isMobileMenuOpen) {
-      const originalOverflow = document.body.style.overflow;
       document.body.style.overflow = "hidden";
-      return () => {
-        document.body.style.overflow = originalOverflow;
-      };
+    } else {
+      document.body.style.overflow = "";
     }
+    return () => {
+      document.body.style.overflow = "";
+    };
   }, [isMobileMenuOpen]);
 
   const handleSearchSubmit = (event) => {

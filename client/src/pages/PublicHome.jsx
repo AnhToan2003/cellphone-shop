@@ -283,11 +283,12 @@ const PublicHome = () => {
   }, [storeFilters.search]);
 
   useEffect(() => {
+    if (searchInput.trim() === (storeFilters.search || "")) return;
     const handler = setTimeout(() => {
       dispatch(setFilters({ search: searchInput.trim() }));
-    }, 200);
+    }, 250);
     return () => clearTimeout(handler);
-  }, [dispatch, searchInput]);
+  }, [dispatch, searchInput, storeFilters.search]);
 
   useEffect(() => {
     let active = true;
@@ -728,7 +729,7 @@ const PublicHome = () => {
             </div>
           </div>
 
-          {gridIsLoading ? (
+          {gridIsLoading && gridProducts.length === 0 ? (
             <div className="mt-6 sm:mt-8 grid grid-cols-2 gap-2.5 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4">
               {Array.from({ length: 8 }).map((_, index) => (
                 <div key={index} className="min-w-0">

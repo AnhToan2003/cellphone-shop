@@ -95,6 +95,10 @@ const productSlice = createSlice({
   reducers: {
     setFilters(state, action) {
       const previousFilters = state.filters;
+      const keys = Object.keys(action.payload || {});
+      const hasChange = keys.some((k) => action.payload[k] !== previousFilters[k]);
+      if (!hasChange) return;
+
       const nextFilters = { ...previousFilters, ...action.payload };
       const searchChanged =
         action.payload.search !== undefined &&

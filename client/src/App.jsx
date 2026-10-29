@@ -37,7 +37,7 @@ const ScrollMotionFX = () => {
   }, []);
 
   return (
-    <div className="scroll-progress-bar" aria-hidden="true" />
+    <div className="scroll-progress-bar pointer-events-none" aria-hidden="true" />
   );
 };
 

@@ -117,7 +117,17 @@ export const updateAdminBrand = (brandId, payload) =>
 export const deleteAdminBrand = (brandId) =>
   apiClient.delete(`/admin/brands/${brandId}`);
 
-export const fetchPublicCategories = () => apiClient.get("/categories");
+let publicCategoriesPromise = null;
+export const fetchPublicCategories = () => {
+  if (!publicCategoriesPromise) {
+    publicCategoriesPromise = apiClient.get("/categories").finally(() => {
+      setTimeout(() => {
+        publicCategoriesPromise = null;
+      }, 30000);
+    });
+  }
+  return publicCategoriesPromise;
+};
 
 export const fetchAdminCategories = () => apiClient.get("/admin/categories");
 
