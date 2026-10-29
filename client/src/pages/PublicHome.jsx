@@ -438,7 +438,7 @@ const PublicHome = () => {
     "Sở hữu ngay flagship mới nhất với ưu đãi đặc quyền và bảo hành chu đáo tại Ngọc Triết Store.";
 
   const isLoading = status === "loading";
-  const gridIsLoading = isLoading && items.length === 0;
+  const gridIsLoading = isLoading;
   const showPagination = totalPages > 1;
 
   return (
@@ -656,7 +656,7 @@ const PublicHome = () => {
                     <img
                       src={targetFeaturedImage}
                       alt={targetFeaturedTitle}
-                      className="relative z-10 max-h-[140px] sm:max-h-[240px] lg:max-h-[280px] w-auto max-w-full object-contain drop-shadow-[0_12px_24px_rgba(0,0,0,0.8)] transition duration-500 hover:scale-105"
+                      className="banner-device relative z-10 max-h-[140px] sm:max-h-[240px] lg:max-h-[280px] w-auto max-w-full object-contain drop-shadow-[0_12px_24px_rgba(0,0,0,0.8)] transition duration-700 hover:scale-105"
                       loading="lazy"
                     />
                   </div>

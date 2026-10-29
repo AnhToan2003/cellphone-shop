@@ -104,7 +104,7 @@ const ProductCard = ({ product }) => {
   };
 
   return (
-    <div className="group relative flex h-full flex-col rounded-xl sm:rounded-2xl border border-slate-200/80 bg-white p-2 sm:p-3.5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-slate-300 hover:shadow-xl overflow-hidden min-w-0 touch-manipulation select-none">
+    <div className="group relative flex h-full flex-col rounded-xl sm:rounded-2xl border border-slate-200/80 bg-white p-2 sm:p-3.5 shadow-sm transition-all duration-300 hover:-translate-y-1.5 hover:border-blue-300 hover:shadow-xl hover:shadow-blue-500/10 overflow-hidden min-w-0 touch-manipulation select-none">
       {/* Discount badge — outside image container so it's never clipped */}
       {hasDiscount && (
         <span className="absolute left-1.5 top-1.5 sm:left-2.5 sm:top-2.5 z-10 rounded sm:rounded-lg bg-rose-600 px-1.5 sm:px-2 py-0.5 text-[9px] sm:text-[11px] font-bold uppercase tracking-wider text-white shadow-sm pointer-events-none">

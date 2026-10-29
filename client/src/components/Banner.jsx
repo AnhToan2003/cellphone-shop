@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import PropTypes from "prop-types";
+import { FiChevronLeft, FiChevronRight } from "react-icons/fi";
 
 import { getAssetUrl } from "../utils/assets.js";
 
@@ -51,6 +52,7 @@ const resolveSlides = (slides = []) => {
 const Banner = ({ slides, autoPlay = true, interval = 6000, onSlideNavigate }) => {
   const preparedSlides = useMemo(() => resolveSlides(slides), [slides]);
   const [index, setIndex] = useState(0);
+  const [touchStart, setTouchStart] = useState(null);
 
   useEffect(() => {
     setIndex(0);
@@ -76,6 +78,22 @@ const Banner = ({ slides, autoPlay = true, interval = 6000, onSlideNavigate }) =
     });
   };
 
+  const handleTouchStart = (e) => {
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchEnd = (e) => {
+    if (!touchStart) return;
+    const touchEnd = e.changedTouches[0].clientX;
+    const diff = touchStart - touchEnd;
+    if (diff > 50) {
+      goTo(index + 1);
+    } else if (diff < -50) {
+      goTo(index - 1);
+    }
+    setTouchStart(null);
+  };
+
   const handleNavigate = () => {
     const currentSlide = preparedSlides[index] || FALLBACK_SLIDE;
     if (typeof onSlideNavigate === "function") {
@@ -87,14 +105,43 @@ const Banner = ({ slides, autoPlay = true, interval = 6000, onSlideNavigate }) =
   const resolvedImage = getAssetUrl(currentSlide.imageUrl);
 
   return (
-    <section className="relative overflow-hidden rounded-2xl sm:rounded-[32px] border border-slate-800 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white shadow-xl">
-      {/* Subtle ambient lighting */}
-      <div className="absolute -top-16 -right-16 h-48 w-48 rounded-full bg-blue-600/20 blur-3xl pointer-events-none" />
-      <div className="absolute -bottom-16 -left-16 h-48 w-48 rounded-full bg-indigo-600/20 blur-3xl pointer-events-none" />
+    <section
+      className="group relative overflow-hidden rounded-2xl sm:rounded-[32px] border border-slate-800 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white shadow-xl touch-pan-y"
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
+      {/* Subtle ambient lighting with soft pulse animation */}
+      <div className="absolute -top-16 -right-16 h-48 w-48 rounded-full bg-blue-600/25 blur-3xl pointer-events-none animate-pulse" />
+      <div className="absolute -bottom-16 -left-16 h-48 w-48 rounded-full bg-indigo-600/25 blur-3xl pointer-events-none animate-pulse" />
+
+      {/* Navigation Arrows (Desktop hover) */}
+      {preparedSlides.length > 1 && (
+        <>
+          <button
+            type="button"
+            onClick={() => goTo(index - 1)}
+            className="absolute left-2.5 top-1/2 -translate-y-1/2 hidden md:flex h-9 w-9 items-center justify-center rounded-full bg-black/40 border border-white/10 text-white/80 hover:text-white hover:bg-black/70 backdrop-blur-md opacity-0 group-hover:opacity-100 transition-all z-20 shadow-lg active:scale-90"
+            aria-label="Slide trước"
+          >
+            <FiChevronLeft size={18} />
+          </button>
+          <button
+            type="button"
+            onClick={() => goTo(index + 1)}
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 hidden md:flex h-9 w-9 items-center justify-center rounded-full bg-black/40 border border-white/10 text-white/80 hover:text-white hover:bg-black/70 backdrop-blur-md opacity-0 group-hover:opacity-100 transition-all z-20 shadow-lg active:scale-90"
+            aria-label="Slide tiếp theo"
+          >
+            <FiChevronRight size={18} />
+          </button>
+        </>
+      )}
 
       <div className="relative z-10 p-4 sm:p-8">
-        {/* Split Card: Left Info (60%) — Right Device Image (40%) */}
-        <div className="grid grid-cols-[1.15fr,0.85fr] sm:grid-cols-2 lg:grid-cols-[1.2fr,0.8fr] items-center gap-3 sm:gap-8">
+        {/* Animated Split Card Container with key to trigger transition */}
+        <div
+          key={currentSlide.id || index}
+          className="grid grid-cols-[1.15fr,0.85fr] sm:grid-cols-2 lg:grid-cols-[1.2fr,0.8fr] items-center gap-3 sm:gap-8 animate-fade-in-up duration-500"
+        >
           {/* Left Column: Content */}
           <div className="flex flex-col justify-center space-y-1.5 sm:space-y-3 min-w-0">
             <div>
@@ -141,13 +188,13 @@ const Banner = ({ slides, autoPlay = true, interval = 6000, onSlideNavigate }) =
             ) : null}
           </div>
 
-          {/* Right Column: Hero Device Image */}
+          {/* Right Column: Hero Device Image with Levitation Animation */}
           <div className="relative flex items-center justify-center h-full min-h-[130px] sm:min-h-[220px]">
             <div className="absolute inset-0 bg-blue-500/10 rounded-full blur-xl transform scale-75 pointer-events-none" />
             <img
               src={resolvedImage}
               alt={currentSlide.title}
-              className="relative z-10 max-h-[140px] sm:max-h-[240px] lg:max-h-[280px] w-auto max-w-full object-contain drop-shadow-[0_12px_24px_rgba(0,0,0,0.8)] transition duration-500 hover:scale-105 rounded-xl sm:rounded-2xl"
+              className="banner-device relative z-10 max-h-[140px] sm:max-h-[240px] lg:max-h-[280px] w-auto max-w-full object-contain drop-shadow-[0_12px_24px_rgba(0,0,0,0.8)] transition duration-700 hover:scale-105 rounded-xl sm:rounded-2xl"
               fetchPriority="high"
               decoding="async"
             />
@@ -156,7 +203,7 @@ const Banner = ({ slides, autoPlay = true, interval = 6000, onSlideNavigate }) =
 
         {/* Dots Indicator */}
         {preparedSlides.length > 1 && (
-          <div className="flex justify-center gap-1.5 pt-3 sm:pt-4">
+          <div className="flex justify-center items-center gap-1.5 pt-3 sm:pt-4">
             {preparedSlides.map((slide, slideIndex) => (
               <button
                 key={slide.id}
@@ -164,7 +211,7 @@ const Banner = ({ slides, autoPlay = true, interval = 6000, onSlideNavigate }) =
                 onClick={() => goTo(slideIndex)}
                 className={`h-1.5 rounded-full transition-all duration-300 ${
                   slideIndex === index
-                    ? "w-6 bg-white shadow"
+                    ? "w-7 bg-blue-500 shadow-md shadow-blue-500/50"
                     : "w-1.5 bg-white/30 hover:bg-white/60"
                 }`}
                 aria-label={`Chuyển đến slide ${slideIndex + 1}`}

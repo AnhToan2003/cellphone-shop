@@ -171,15 +171,15 @@ export const listProducts = asyncHandler(async (req, res) => {
 
   const filters = conditions.length ? { $and: conditions } : {};
 
-  let sortQuery = { createdAt: -1 };
+  let sortQuery = { createdAt: -1, _id: -1 };
   if (sort === "price-asc") {
-    sortQuery = { price: 1 };
+    sortQuery = { price: 1, _id: -1 };
   } else if (sort === "price-desc") {
-    sortQuery = { price: -1 };
+    sortQuery = { price: -1, _id: -1 };
   } else if (sort === "name") {
-    sortQuery = { name: 1 };
+    sortQuery = { name: 1, _id: -1 };
   } else if (sort === "rating") {
-    sortQuery = { rating: -1 };
+    sortQuery = { rating: -1, _id: -1 };
   }
 
   const pagination = preparePagination({

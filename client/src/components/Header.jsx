@@ -519,7 +519,7 @@ export default function Header() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Tìm iPhone, iPad, Mac..."
-              className="w-full bg-transparent border-none outline-none text-xs text-white placeholder:text-slate-400"
+              className="w-full min-w-0 bg-transparent border-none outline-none text-base sm:text-xs text-white placeholder:text-slate-400"
             />
             {query && (
               <button
