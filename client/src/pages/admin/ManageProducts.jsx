@@ -107,6 +107,7 @@ const ManageProducts = () => {
   const [gallery, setGallery] = useState([]);
   const [galleryUploading, setGalleryUploading] = useState(false);
   const [variantPrices, setVariantPrices] = useState({});
+  const [variantStocks, setVariantStocks] = useState({});
   const [variantImages, setVariantImages] = useState({});
   const [variantUploading, setVariantUploading] = useState({});
   const [colorImages, setColorImages] = useState({});
@@ -264,6 +265,35 @@ const ManageProducts = () => {
 
   useEffect(() => {
     if (!variantMatrix.length) {
+      setVariantStocks((prev) => (Object.keys(prev).length ? {} : prev));
+      return;
+    }
+
+    setVariantStocks((prev) => {
+      const next = {};
+      let changed = false;
+
+      variantMatrix.forEach(({ key }) => {
+        if (Object.prototype.hasOwnProperty.call(prev, key)) {
+          next[key] = prev[key];
+        } else {
+          next[key] = form.stock ? String(form.stock) : "10";
+          changed = true;
+        }
+      });
+
+      Object.keys(prev).forEach((key) => {
+        if (!Object.prototype.hasOwnProperty.call(next, key)) {
+          changed = true;
+        }
+      });
+
+      return changed ? next : prev;
+    });
+  }, [variantMatrix, form.stock]);
+
+  useEffect(() => {
+    if (!variantMatrix.length) {
       setVariantImages((prev) => (Object.keys(prev).length ? {} : prev));
       setVariantUploading({});
       return;
@@ -307,6 +337,14 @@ const ManageProducts = () => {
   const handleVariantPriceChange = (key, value) => {
     const sanitized = value.replace(/[^\d]/g, "");
     setVariantPrices((prev) => ({
+      ...prev,
+      [key]: sanitized,
+    }));
+  };
+
+  const handleVariantStockChange = (key, value) => {
+    const sanitized = value.replace(/[^\d]/g, "");
+    setVariantStocks((prev) => ({
       ...prev,
       [key]: sanitized,
     }));
@@ -488,6 +526,7 @@ const ManageProducts = () => {
     setColorImages({});
     setColorUploading({});
     setVariantPrices({});
+    setVariantStocks({});
     setVariantImages({});
     setVariantUploading({});
     setEditingId(null);
@@ -569,6 +608,7 @@ const ManageProducts = () => {
     }
 
     const variantPriceMap = {};
+    const variantStockMap = {};
     const variantImageMap = {};
     if (Array.isArray(product.variants)) {
       product.variants.forEach((variant) => {
@@ -580,6 +620,10 @@ const ManageProducts = () => {
           variant?.price !== undefined && variant?.price !== null
             ? String(variant.price)
             : "";
+        variantStockMap[key] =
+          variant?.stock !== undefined && variant?.stock !== null
+            ? String(variant.stock)
+            : "";
         const imgs = Array.isArray(variant?.images) ? variant.images.filter(Boolean) : [];
         variantImageMap[key] = imgs;
         if (variant.color && imgs.length > 0 && !reconstructedColorImages[variant.color]) {
@@ -589,6 +633,7 @@ const ManageProducts = () => {
     }
     setColorImages(reconstructedColorImages);
     setVariantPrices(variantPriceMap);
+    setVariantStocks(variantStockMap);
     setVariantImages(variantImageMap);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -664,6 +709,11 @@ const ManageProducts = () => {
             rawValue === undefined || rawValue === ""
               ? baseVariantPrice
               : Number(rawValue);
+          const rawStock = variantStocks[key];
+          const stockValue =
+            rawStock !== undefined && rawStock !== ""
+              ? Math.max(0, Number(rawStock))
+              : (form.stock ? Math.max(0, Number(form.stock)) : 10);
           const imagesForVariant =
             (variantImages[key] && variantImages[key].length > 0)
               ? variantImages[key]
@@ -674,6 +724,7 @@ const ManageProducts = () => {
             color,
             capacity,
             price: priceValue,
+            stock: stockValue,
             images: imagesForVariant,
           };
         });
@@ -1097,6 +1148,7 @@ const ManageProducts = () => {
                       <th className="px-4 py-3 text-left">Màu sắc</th>
                       <th className="px-4 py-3 text-left">Dung lượng</th>
                       <th className="px-4 py-3 text-left">Giá bán (₫)</th>
+                      <th className="px-4 py-3 text-left">Tồn kho</th>
                       <th className="px-4 py-3 text-left min-w-[240px]">Ảnh màu hiển thị</th>
                       <th className="px-4 py-3 text-right">Áp dụng giá nhanh</th>
                     </tr>
@@ -1141,6 +1193,18 @@ const ManageProducts = () => {
                                 </p>
                               ) : null}
                             </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <input
+                              type="text"
+                              inputMode="numeric"
+                              value={variantStocks[key] ?? ""}
+                              onChange={(event) =>
+                                handleVariantStockChange(key, event.target.value)
+                              }
+                              placeholder={form.stock ? String(form.stock) : "10"}
+                              className="w-24 rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 text-sm text-slate-100 outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500/40"
+                            />
                           </td>
                           <td className="px-4 py-3">
                             <div className="flex flex-wrap items-center gap-2">

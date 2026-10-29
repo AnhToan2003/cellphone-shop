@@ -590,7 +590,7 @@ export default function Header() {
       {/* Mobile Drawer Backdrop - tap anywhere on screen to close */}
       {isMobileMenuOpen && (
         <div
-          className="lg:hidden fixed inset-0 z-30 bg-black/60 backdrop-blur-sm transition-opacity duration-200"
+          className="lg:hidden fixed inset-0 z-40 bg-black/70 backdrop-blur-sm transition-opacity duration-200"
           onClick={() => {
             setIsMobileMenuOpen(false);
             setMobileExpandedCat(null);
@@ -601,7 +601,10 @@ export default function Header() {
 
       {/* Mobile Drawer Menu */}
       {isMobileMenuOpen && (
-        <div className="lg:hidden border-b border-white/10 bg-slate-950 px-4 py-3 text-slate-200 shadow-2xl backdrop-blur-2xl animate-fade-in-up max-h-[75vh] overflow-y-auto overscroll-contain">
+        <div
+          className="lg:hidden relative z-50 border-b border-white/10 bg-slate-950 px-4 py-3 text-slate-200 shadow-2xl backdrop-blur-2xl animate-fade-in-up max-h-[75vh] overflow-y-auto overscroll-contain"
+          onClick={(e) => e.stopPropagation()}
+        >
           <div className="flex items-center justify-between pb-2.5 mb-2 border-b border-white/10">
             <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
               Danh mục & Điều hướng
@@ -634,23 +637,23 @@ export default function Header() {
             {navCatalog.map((cat) => {
               const isExpanded = mobileExpandedCat === cat.name;
               return (
-                <div key={cat.name} className="rounded-xl border border-white/5 bg-white/[0.02] overflow-hidden">
-                  <div className="flex items-center justify-between px-3 py-2">
+                <div key={cat.name} className="rounded-xl border border-white/10 bg-white/[0.03] overflow-hidden">
+                  <div className="flex items-stretch justify-between">
                     <Link
                       to={cat.to}
                       onClick={() => setIsMobileMenuOpen(false)}
-                      className="text-xs font-bold text-white hover:text-blue-400 transition"
+                      className="flex-1 px-3 py-2.5 text-xs sm:text-sm font-bold text-white hover:text-blue-400 transition flex items-center justify-between"
                     >
                       {cat.name}
                     </Link>
                     <button
                       type="button"
                       onClick={() => setMobileExpandedCat(isExpanded ? null : cat.name)}
-                      className="p-1 text-slate-400 hover:text-white"
+                      className="px-3.5 py-2.5 text-slate-400 hover:text-white hover:bg-white/10 active:bg-white/15 flex items-center justify-center border-l border-white/5"
                       aria-label={`Mở danh mục con của ${cat.name}`}
                     >
                       <FiChevronDown
-                        size={14}
+                        size={15}
                         className={`transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`}
                       />
                     </button>

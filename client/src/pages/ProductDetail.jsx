@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { toast } from "react-hot-toast";
 
 import RatingStars from "../components/RatingStars.jsx";
@@ -10,6 +10,7 @@ import { fetchProductBySlug } from "../store/slices/productSlice.js";
 import { getAssetUrl, getProductImage } from "../utils/assets.js";
 import { fetchProductReviews, createProductReview } from "../services/api.js";
 import { useAuth } from "../context/AuthContext.jsx";
+import { FALLBACK_PRODUCTS } from "../data/fallbackProducts.js";
 
 const currency = (value) =>
   new Intl.NumberFormat("vi-VN", {
@@ -69,6 +70,9 @@ const CART_IMAGE_PLACEHOLDER =
 
 const ProductDetail = () => {
   const { slug } = useParams();
+  const [searchParams] = useSearchParams();
+  const isBuyNowIntent = searchParams.get("buyNow") === "1";
+  const isSelectIntent = searchParams.get("select") === "1";
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
@@ -91,10 +95,15 @@ const ProductDetail = () => {
   const [reviewForm, setReviewForm] = useState({ rating: 5, comment: "" });
   const [loadingReviews, setLoadingReviews] = useState(false);
   const [submittingReview, setSubmittingReview] = useState(false);
-  const variantList = useMemo(
-    () => (Array.isArray(product?.variants) ? product.variants : []),
-    [product?.variants]
-  );
+  const variantList = useMemo(() => {
+    if (Array.isArray(product?.variants) && product.variants.length > 0) {
+      return product.variants;
+    }
+    const fallback = FALLBACK_PRODUCTS.find(
+      (p) => p.slug === slug || p.slug === product?.slug
+    );
+    return Array.isArray(fallback?.variants) ? fallback.variants : [];
+  }, [product?.variants, product?.slug, slug]);
 
   const {
     capacitiesByColor,
@@ -170,17 +179,14 @@ const ProductDetail = () => {
   }, [dispatch, slug]);
 
   useEffect(() => {
-    if (!product) return;
-    const colors = Array.isArray(product.options?.colors)
-      ? product.options.colors
-      : [];
-    const capacities = Array.isArray(product.options?.capacities)
-      ? product.options.capacities
-      : [];
-    setSelectedColor(colors[0] || "");
-    setSelectedCapacity(capacities[0] || "");
+    if (colors.length && !selectedColor) {
+      setSelectedColor(colors[0] || "");
+    }
+    if (capacities.length && !selectedCapacity) {
+      setSelectedCapacity(capacities[0] || "");
+    }
     setLastSelectedOption(null);
-  }, [product]);
+  }, [colors, capacities]);
 
   useEffect(() => {
     let active = true;
@@ -211,17 +217,33 @@ const ProductDetail = () => {
     };
   }, [slug]);
 
-  const colors = useMemo(
-    () => (Array.isArray(product?.options?.colors) ? product.options.colors : []),
-    [product?.options?.colors]
-  );
-  const capacities = useMemo(
-    () =>
-      Array.isArray(product?.options?.capacities)
-        ? product.options.capacities
-        : [],
-    [product?.options?.capacities]
-  );
+  const colors = useMemo(() => {
+    if (Array.isArray(product?.options?.colors) && product.options.colors.length > 0) {
+      return product.options.colors;
+    }
+    const fallback = FALLBACK_PRODUCTS.find(
+      (p) => p.slug === slug || p.slug === product?.slug
+    );
+    if (Array.isArray(fallback?.options?.colors) && fallback.options.colors.length > 0) {
+      return fallback.options.colors;
+    }
+    const fromVariants = [...new Set(variantList.map((v) => v.color).filter(Boolean))];
+    return fromVariants;
+  }, [product?.options?.colors, product?.slug, slug, variantList]);
+
+  const capacities = useMemo(() => {
+    if (Array.isArray(product?.options?.capacities) && product.options.capacities.length > 0) {
+      return product.options.capacities;
+    }
+    const fallback = FALLBACK_PRODUCTS.find(
+      (p) => p.slug === slug || p.slug === product?.slug
+    );
+    if (Array.isArray(fallback?.options?.capacities) && fallback.options.capacities.length > 0) {
+      return fallback.options.capacities;
+    }
+    const fromVariants = [...new Set(variantList.map((v) => v.capacity).filter(Boolean))];
+    return fromVariants;
+  }, [product?.options?.capacities, product?.slug, slug, variantList]);
 
   useEffect(() => {
     if (!selectedColor || lastSelectedOption === "capacity") {
@@ -720,6 +742,24 @@ const ProductDetail = () => {
           </div>
 
           <div className="mt-4 sm:mt-6 space-y-5 rounded-2xl bg-white p-4 sm:p-6 shadow-sm">
+            {/* Direct Buying / Cart guidance alert */}
+            {isBuyNowIntent && (
+              <div className="rounded-xl border border-blue-500/30 bg-blue-50/80 p-3 text-xs sm:text-sm text-blue-900 flex items-center gap-2 shadow-sm animate-fade-in-up">
+                <span className="text-base shrink-0">👉</span>
+                <span>
+                  Vui lòng chọn <strong>Màu sắc &amp; Dung lượng</strong> bạn muốn mua bên dưới, sau đó nhấn <strong>Mua ngay</strong> để tiếp tục thanh toán.
+                </span>
+              </div>
+            )}
+            {isSelectIntent && (
+              <div className="rounded-xl border border-blue-500/30 bg-blue-50/80 p-3 text-xs sm:text-sm text-blue-900 flex items-center gap-2 shadow-sm animate-fade-in-up">
+                <span className="text-base shrink-0">🛒</span>
+                <span>
+                  Vui lòng chọn <strong>Màu sắc &amp; Dung lượng</strong> trước khi thêm vào giỏ hàng.
+                </span>
+              </div>
+            )}
+
             {colors.length > 0 && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
@@ -786,6 +826,13 @@ const ProductDetail = () => {
                   {capacities.map((capacity) => {
                     const selectable = isCapacitySelectable(capacity);
                     const active = selectable && capacity === selectedCapacity;
+                    const capVariant = findVariantMatch(variantList, selectedColor, capacity);
+                    const capStock =
+                      capVariant?.stock !== null && capVariant?.stock !== undefined
+                        ? Number(capVariant.stock)
+                        : null;
+                    const isCapOutOfStock = capStock !== null && capStock <= 0;
+
                     return (
                       <button
                         key={capacity}
@@ -795,14 +842,19 @@ const ProductDetail = () => {
                           setLastSelectedOption("capacity");
                           setSelectedCapacity(capacity);
                         }}
-                        disabled={!selectable}
-                        className={`rounded-full border px-4 py-2 text-xs sm:text-sm font-semibold transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-40 ${
+                        disabled={!selectable || isCapOutOfStock}
+                        className={`inline-flex items-center gap-1.5 rounded-full border px-4 py-2 text-xs sm:text-sm font-semibold transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-40 ${
                           active
                             ? "border-slate-950 bg-slate-950 text-white shadow-md scale-105"
+                            : isCapOutOfStock
+                            ? "border-rose-200 bg-rose-50/50 text-rose-400 line-through"
                             : "border-slate-200 bg-white text-slate-700 hover:border-slate-400 hover:bg-slate-50"
                         }`}
                       >
-                        {capacity}
+                        <span>{capacity}</span>
+                        {isCapOutOfStock && (
+                          <span className="text-[10px] text-rose-500 font-normal no-underline">(Hết)</span>
+                        )}
                       </button>
                     );
                   })}
@@ -812,35 +864,43 @@ const ProductDetail = () => {
 
             <div>
               <h3 className="text-lg font-semibold text-slate-900">Số lượng</h3>
-              <div className="mt-4 flex items-center gap-4">
+              <div className="mt-4 flex flex-wrap items-center gap-4">
                 <div className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50">
                   <button
                     type="button"
                     onClick={() => setQuantity((prev) => Math.max(1, prev - 1))}
-                    disabled={quantity <= 1}
-                    className="h-10 w-10 text-xl font-semibold text-slate-600"
+                    disabled={quantity <= 1 || availableStock < 1}
+                    className="h-10 w-10 text-xl font-semibold text-slate-600 disabled:opacity-40 disabled:cursor-not-allowed"
                     aria-label="Giảm số lượng"
                   >
                     -
                   </button>
                   <span className="w-12 text-center text-base font-semibold">
-                    {quantity}
+                    {availableStock < 1 ? 0 : quantity}
                   </span>
                   <button
                     type="button"
                     onClick={() =>
                       setQuantity((prev) => Math.min(availableStock, prev + 1))
                     }
-                    disabled={quantity >= availableStock}
-                    className="h-10 w-10 text-xl font-semibold text-slate-600"
+                    disabled={quantity >= availableStock || availableStock < 1}
+                    className="h-10 w-10 text-xl font-semibold text-slate-600 disabled:opacity-40 disabled:cursor-not-allowed"
                     aria-label="Tăng số lượng"
                   >
                     +
                   </button>
                 </div>
-                <p className="text-sm text-slate-500">
-                  {availableStock} sản phẩm trong kho
-                </p>
+                {availableStock > 0 ? (
+                  <p className="text-sm font-medium text-emerald-600 flex items-center gap-1.5">
+                    <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                    Còn <strong className="font-bold text-emerald-700">{availableStock}</strong> sản phẩm sẵn hàng
+                  </p>
+                ) : (
+                  <p className="text-sm font-bold text-rose-600 flex items-center gap-1.5">
+                    <span className="h-2 w-2 rounded-full bg-rose-500" />
+                    Tạm hết hàng cho phiên bản này
+                  </p>
+                )}
               </div>
             </div>
 
@@ -849,17 +909,17 @@ const ProductDetail = () => {
                 type="button"
                 onClick={handleAddToCart}
                 disabled={availableStock < 1}
-                className="flex-1 rounded-xl border-2 border-slate-900 px-6 py-3 text-sm font-bold text-slate-900 transition hover:bg-slate-100"
+                className="flex-1 rounded-xl border-2 border-slate-900 px-6 py-3 text-sm font-bold text-slate-900 transition hover:bg-slate-100 disabled:border-slate-300 disabled:text-slate-400 disabled:cursor-not-allowed"
               >
-                Thêm vào giỏ hàng
+                {availableStock < 1 ? "Tạm hết hàng" : "Thêm vào giỏ hàng"}
               </button>
               <button
                 type="button"
                 onClick={handleBuyNow}
                 disabled={availableStock < 1}
-                className="flex-1 rounded-xl bg-slate-900 px-6 py-3 text-sm font-bold text-white shadow-lg transition hover:bg-blue-600"
+                className="flex-1 rounded-xl bg-slate-900 px-6 py-3 text-sm font-bold text-white shadow-lg transition hover:bg-blue-600 disabled:bg-slate-300 disabled:text-slate-500 disabled:cursor-not-allowed"
               >
-                Mua ngay
+                {availableStock < 1 ? "Tạm hết hàng" : "Mua ngay"}
               </button>
             </div>
           </div>

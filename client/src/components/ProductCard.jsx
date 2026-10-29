@@ -5,7 +5,6 @@ import { toast } from "react-hot-toast";
 import { AiFillHeart, AiOutlineHeart } from "react-icons/ai";
 
 import RatingStars from "./RatingStars.jsx";
-import { addItem } from "../store/slices/cartSlice.js";
 import { getProductImage } from "../utils/assets.js";
 import { toggleFavorite } from "../store/slices/favoritesSlice.js";
 
@@ -83,23 +82,16 @@ const ProductCard = ({ product }) => {
     "https://placehold.co/400x300?text=Coming+Soon"
   );
 
-  const handleAddToCart = () => {
-    dispatch(
-      addItem({
-        id: product._id,
-        name: product.name,
-        slug: product.slug,
-        price: finalPrice,
-        image: imageSrc,
-        availableStock: product.stock,
-      })
-    );
-    toast.success("Đã thêm vào giỏ hàng");
+  const handleAddToCart = (e) => {
+    e?.preventDefault?.();
+    e?.stopPropagation?.();
+    navigate(`/product/${product.slug}?select=1`);
   };
 
-  const handleBuyNow = () => {
-    handleAddToCart();
-    navigate("/checkout");
+  const handleBuyNow = (e) => {
+    e?.preventDefault?.();
+    e?.stopPropagation?.();
+    navigate(`/product/${product.slug}?buyNow=1`);
   };
 
   const handleToggleFavorite = () => {
