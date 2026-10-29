@@ -112,30 +112,31 @@ const ProductCard = ({ product }) => {
   };
 
   return (
-    <div className="group relative flex h-full flex-col rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-slate-300 hover:shadow-xl">
+    <div className="group relative flex h-full flex-col rounded-xl sm:rounded-2xl border border-slate-200/80 bg-white p-2 sm:p-3.5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-slate-300 hover:shadow-xl overflow-hidden min-w-0 touch-manipulation select-none">
       {/* Discount badge — outside image container so it's never clipped */}
       {hasDiscount && (
-        <span className="absolute left-3 top-3 z-10 rounded-lg bg-rose-600 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-white shadow-md pointer-events-none">
+        <span className="absolute left-1.5 top-1.5 sm:left-2.5 sm:top-2.5 z-10 rounded sm:rounded-lg bg-rose-600 px-1.5 sm:px-2 py-0.5 text-[9px] sm:text-[11px] font-bold uppercase tracking-wider text-white shadow-sm pointer-events-none">
           -{discountPercent}%
         </span>
       )}
 
-      <div className="relative mb-3 overflow-hidden rounded-xl bg-slate-50 p-4 aspect-square flex items-center justify-center">
+      <div className="relative mb-2 sm:mb-2.5 overflow-hidden rounded-lg sm:rounded-xl bg-slate-50/80 p-2 sm:p-3 aspect-square flex items-center justify-center">
         <Link to={`/product/${product.slug}`} className="block h-full w-full">
           <img
             src={imageSrc}
             alt={product.name}
             className="h-full w-full object-contain transition duration-500 group-hover:scale-105"
             loading="lazy"
+            decoding="async"
           />
         </Link>
         <button
           type="button"
           onClick={handleToggleFavorite}
           aria-pressed={isFavorite}
-          className={`absolute right-2.5 top-2.5 flex h-9 w-9 items-center justify-center rounded-full border bg-white shadow-sm transition hover:scale-105 ${
+          className={`absolute right-1.5 top-1.5 sm:right-2 sm:top-2 flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full border bg-white/90 backdrop-blur-sm shadow-sm transition hover:scale-105 ${
             isFavorite
-              ? "border-rose-200 text-rose-500 ring-2 ring-rose-100"
+              ? "border-rose-200 text-rose-500 ring-1 ring-rose-100"
               : "border-slate-200 text-slate-400 hover:text-rose-500"
           }`}
           aria-label={
@@ -145,74 +146,83 @@ const ProductCard = ({ product }) => {
           }
         >
           {isFavorite ? (
-            <AiFillHeart size={18} className="text-rose-500" />
+            <AiFillHeart className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-rose-500" />
           ) : (
-            <AiOutlineHeart size={18} />
+            <AiOutlineHeart className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
           )}
         </button>
       </div>
 
-      <div className="flex flex-1 flex-col">
-        <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+      <div className="flex flex-1 flex-col min-w-0">
+        <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-slate-400 leading-none truncate">
           {product.brand}
         </span>
         <Link
           to={`/product/${product.slug}`}
-          className="mt-1.5 text-base font-bold text-slate-900 transition hover:text-blue-600 line-clamp-2"
+          className="mt-1 text-xs sm:text-sm md:text-base font-bold text-slate-900 leading-snug transition hover:text-blue-600 line-clamp-2 min-h-[2rem] sm:min-h-[2.5rem]"
+          title={product.name}
         >
           {product.name}
         </Link>
 
-        <div className="mt-2 flex items-center justify-between text-xs text-slate-500">
-          <RatingStars rating={product.rating || 0} />
-          <span className="text-[11px] font-medium">{product.ratingCount || 0} đánh giá</span>
+        <div className="mt-1 sm:mt-1.5 flex items-center justify-between gap-1 text-xs text-slate-500">
+          <div className="flex items-center gap-1 min-w-0">
+            <RatingStars rating={product.rating || 0} size={11} />
+            <span className="text-[10px] sm:text-xs font-semibold text-slate-600 hidden sm:inline">
+              {Number(product.rating || 5).toFixed(1)}
+            </span>
+          </div>
+          <span className="text-[9px] sm:text-[10px] font-medium text-slate-400 shrink-0">
+            {product.ratingCount || 0} đánh giá
+          </span>
         </div>
 
         {product.options?.colors?.length > 1 && (
-          <div className="mt-2 flex flex-wrap items-center gap-1.5">
-            <span className="inline-block rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600">
-              {product.options.colors.length} màu sắc
+          <div className="mt-1 sm:mt-1.5 flex flex-wrap items-center gap-1">
+            <span className="inline-block rounded bg-slate-100 px-1.5 py-0.5 text-[9px] sm:text-[10px] font-medium text-slate-600">
+              {product.options.colors.length} màu
             </span>
             {product.options?.capacities?.length > 1 && (
-              <span className="inline-block rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600">
-                {product.options.capacities.length} dung lượng
+              <span className="inline-block rounded bg-slate-100 px-1.5 py-0.5 text-[9px] sm:text-[10px] font-medium text-slate-600">
+                {product.options.capacities.length} bộ nhớ
               </span>
             )}
           </div>
         )}
 
-        <div className="mt-3 flex flex-wrap items-baseline gap-2">
-          <p className="text-xl font-extrabold text-slate-950">
+        <div className="mt-1.5 sm:mt-2.5 flex flex-wrap items-baseline gap-1 sm:gap-1.5 min-w-0">
+          <p className="text-xs sm:text-base md:text-lg lg:text-xl font-extrabold text-slate-950 tracking-tight leading-tight">
             {formatCurrency(finalPrice)}
           </p>
           {hasDiscount && (
-            <p className="text-xs text-slate-400 line-through">
+            <p className="text-[9px] sm:text-xs text-slate-400 line-through truncate">
               {formatCurrency(originalPrice)}
             </p>
           )}
         </div>
 
         {product.appliedPromotion?.name ? (
-          <p className="mt-1 text-xs font-semibold text-emerald-600">
+          <p className="mt-1 text-[10px] sm:text-xs font-semibold text-emerald-600 truncate" title={product.appliedPromotion.name}>
             🎁 {product.appliedPromotion.name}
           </p>
         ) : null}
 
-        <div className="mt-4 flex gap-2 pt-2 border-t border-slate-100">
+        <div className="mt-auto pt-2 sm:pt-3 border-t border-slate-100 flex items-center gap-1.5 sm:gap-2">
           <button
             type="button"
             onClick={handleBuyNow}
-            className="flex-1 rounded-xl bg-slate-900 px-3 py-2.5 text-xs font-bold text-white shadow transition hover:bg-blue-600"
+            className="flex-1 rounded-lg sm:rounded-xl bg-slate-900 py-1.5 sm:py-2.5 px-2 text-[11px] sm:text-xs font-bold text-white shadow-sm transition hover:bg-blue-600 active:scale-95 text-center truncate"
           >
             Mua ngay
           </button>
           <button
             type="button"
             onClick={handleAddToCart}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 text-slate-700 transition hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600"
+            className="flex h-7 w-7 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-lg sm:rounded-xl border border-slate-200 text-slate-700 transition hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600 active:scale-95"
             aria-label="Thêm vào giỏ hàng"
+            title="Thêm vào giỏ hàng"
           >
-            <span className="text-lg leading-none font-bold">+</span>
+            <span className="text-sm sm:text-base leading-none font-bold">+</span>
           </button>
         </div>
       </div>

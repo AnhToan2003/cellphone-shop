@@ -57,9 +57,11 @@ const Favorites = () => {
           </button>
         </div>
 
-        <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-2 gap-2.5 sm:gap-6 lg:grid-cols-3">
           {items.map((product) => (
-            <ProductCard key={product._id} product={product} />
+            <div key={product._id} className="min-w-0">
+              <ProductCard product={product} />
+            </div>
           ))}
         </div>
       </div>

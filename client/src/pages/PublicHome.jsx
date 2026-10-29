@@ -425,7 +425,7 @@ const PublicHome = () => {
     <>
       <div className="relative pb-20 sm:pb-28">
         <div className="absolute inset-0 -z-10 bg-white/30" aria-hidden="true" />
-        <div className="container-safe space-y-12 py-10">
+        <div className="container-safe space-y-6 sm:space-y-12 py-4 sm:py-10">
           <Banner
             slides={bannerSlides}
             onSlideNavigate={(slide) => {
@@ -444,25 +444,26 @@ const PublicHome = () => {
             }}
           />
 
-        <section className="grid gap-4 md:grid-cols-3">
+        <section className="grid grid-cols-3 gap-2 sm:gap-4">
           {EXPERIENCE_FEATURES.map((feature, featureIndex) => (
             <div
               key={feature.title}
-              className={`motion-card motion-delay-${(featureIndex % 4) + 1} rounded-3xl border border-white/60 bg-white/90 p-6 shadow-card backdrop-blur motion-hover-float`}
+              className="rounded-xl sm:rounded-2xl border border-slate-200/80 bg-white p-2.5 sm:p-5 text-center sm:text-left shadow-sm"
             >
-              <h3 className="text-xl font-semibold text-slate-900">
+              <h3 className="text-xs sm:text-base font-bold text-slate-900 truncate">
                 {feature.title}
               </h3>
-              <p className="mt-2 text-sm text-slate-500">{feature.subtitle}</p>
+              <p className="hidden sm:block mt-1 text-xs text-slate-500 line-clamp-1">{feature.subtitle}</p>
             </div>
           ))}
         </section>
 
-        <section className="motion-panel rounded-[32px] border border-white/60 bg-white/90 p-6 shadow-glass backdrop-blur">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+        <section className="motion-panel rounded-2xl sm:rounded-3xl border border-white/60 bg-white/90 p-3 sm:p-5 shadow-glass backdrop-blur">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            {/* Desktop Search Input */}
             <form
               onSubmit={handleSearchSubmit}
-              className="flex w-full flex-1 items-center gap-3 rounded-full border border-slate-200 bg-white px-4 py-2 shadow-sm transition focus-within:border-brand-primary focus-within:ring-2 focus-within:ring-brand-primary/20"
+              className="hidden md:flex flex-1 items-center gap-3 rounded-full border border-slate-200 bg-white px-4 py-2 shadow-sm transition focus-within:border-brand-primary focus-within:ring-2 focus-within:ring-brand-primary/20"
             >
               <input
                 type="search"
@@ -479,24 +480,29 @@ const PublicHome = () => {
               </button>
             </form>
 
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              <label className="text-sm font-medium text-slate-600">
-                Sắp xếp theo
-              </label>
-              <select
-                value={sortOption}
-                onChange={handleSortChange}
-                className="rounded-full border border-slate-200 px-4 py-2 text-sm text-slate-700 outline-none transition focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
-              >
-                <option value="popular">Phổ biến</option>
-                <option value="price-asc">Giá: Thấp đến cao</option>
-                <option value="price-desc">Giá: Cao đến thấp</option>
-                <option value="name">Tên A-Z</option>
-              </select>
+            <div className="flex items-center justify-between gap-3 w-full lg:w-auto">
+              <span className="text-xs sm:text-sm font-bold text-slate-800">
+                Danh mục Apple:
+              </span>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <label className="text-[11px] sm:text-xs font-semibold text-slate-500">
+                  Sắp xếp:
+                </label>
+                <select
+                  value={sortOption}
+                  onChange={handleSortChange}
+                  className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-slate-700 outline-none transition focus:border-brand-primary font-medium shadow-sm"
+                >
+                  <option value="popular">Phổ biến</option>
+                  <option value="price-asc">Giá: Thấp → cao</option>
+                  <option value="price-desc">Giá: Cao → thấp</option>
+                  <option value="name">Tên A-Z</option>
+                </select>
+              </div>
             </div>
           </div>
 
-          <div className="mt-6 flex flex-wrap gap-2.5">
+          <div className="mt-4 sm:mt-6 flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 sm:flex-wrap">
             {categoriesList.map((cat, idx) => {
               const isActive = (storeFilters.category || "").toLowerCase() === cat.id.toLowerCase();
               return (
@@ -507,13 +513,13 @@ const PublicHome = () => {
                     dispatch(setFilters({ category: cat.id, page: 1 }));
                     setSelectedSubCategory("");
                   }}
-                  className={`motion-chip motion-delay-${(idx % 6) + 1} flex items-center gap-2 rounded-full border px-4 sm:px-5 py-2 text-xs sm:text-sm font-semibold transition duration-200 hover:-translate-y-0.5 ${
+                  className={`motion-chip motion-delay-${(idx % 6) + 1} shrink-0 flex items-center gap-1.5 sm:gap-2 rounded-full border px-3.5 sm:px-5 py-2 text-xs sm:text-sm font-semibold transition duration-200 hover:-translate-y-0.5 active:scale-95 ${
                     isActive
                       ? "border-transparent bg-slate-950 text-white shadow-lg"
                       : "border-slate-200 bg-white text-slate-700 hover:border-slate-400 hover:text-slate-900"
                   }`}
                 >
-                  <span className="text-base">{cat.icon}</span>
+                  <span className="text-sm sm:text-base">{cat.icon}</span>
                   <span>{cat.label}</span>
                 </button>
               );
@@ -521,14 +527,14 @@ const PublicHome = () => {
           </div>
 
           {activeCatalogItem?.subCategories?.length > 0 && (
-            <div className="mt-4 pt-4 border-t border-slate-100 flex flex-wrap items-center gap-2">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-500 mr-1">
-                Phân loại {activeCatalogItem.label}:
+            <div className="mt-3 pt-3 sm:mt-4 sm:pt-4 border-t border-slate-100 flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar pb-1 sm:flex-wrap">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-500 mr-1 shrink-0">
+                Phân loại:
               </span>
               <button
                 type="button"
                 onClick={() => setSelectedSubCategory("")}
-                className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition duration-200 ${
+                className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition duration-200 active:scale-95 ${
                   !selectedSubCategory
                     ? "bg-blue-600 text-white shadow-sm"
                     : "bg-slate-100 text-slate-700 hover:bg-slate-200"
@@ -543,7 +549,7 @@ const PublicHome = () => {
                     key={sub}
                     type="button"
                     onClick={() => setSelectedSubCategory(isSubActive ? "" : sub)}
-                    className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition duration-200 ${
+                    className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition duration-200 active:scale-95 ${
                       isSubActive
                         ? "bg-blue-600 text-white shadow-sm"
                         : "bg-slate-100 text-slate-700 hover:bg-slate-200"
@@ -558,39 +564,42 @@ const PublicHome = () => {
         </section>
 
         {isSpotlightActive && targetFeaturedProduct && (
-          <section className="motion-panel grid gap-6">
-            <div className="relative overflow-hidden rounded-[28px] border border-slate-800 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-6 sm:p-8 text-white shadow-xl">
-              <div className="absolute inset-0 opacity-25">
-                <img
-                  src={targetFeaturedImage}
-                  alt={targetFeaturedTitle}
-                  className="h-full w-full object-cover mix-blend-overlay"
-                  loading="lazy"
-                />
-              </div>
-              <div className="relative z-10 flex flex-col justify-between gap-6 lg:flex-row lg:items-center">
-                <div className="space-y-4 max-w-xl">
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-500/20 border border-blue-400/30 px-3 py-1 text-xs font-bold uppercase tracking-wider text-blue-300">
-                    <span className="h-1.5 w-1.5 rounded-full bg-blue-400 animate-ping" />
-                    {targetFeaturedBadge}
-                  </span>
-                  <h3 className="text-2xl sm:text-3xl font-extrabold leading-tight text-white tracking-tight">
+          <section className="motion-panel">
+            <div className="relative overflow-hidden rounded-2xl sm:rounded-[32px] border border-slate-800 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-4 sm:p-8 text-white shadow-xl">
+              {/* Subtle ambient backlights */}
+              <div className="absolute -top-16 -right-16 h-48 w-48 rounded-full bg-blue-600/20 blur-3xl pointer-events-none" />
+              <div className="absolute -bottom-16 -left-16 h-48 w-48 rounded-full bg-indigo-600/20 blur-3xl pointer-events-none" />
+
+              <div className="relative z-10 grid grid-cols-[1.15fr,0.85fr] sm:grid-cols-2 lg:grid-cols-[1.2fr,0.8fr] items-center gap-3 sm:gap-8">
+                {/* Left: Product Info */}
+                <div className="flex flex-col justify-center space-y-1.5 sm:space-y-3 min-w-0">
+                  <div>
+                    <span className="inline-flex items-center gap-1 rounded-full bg-blue-500/20 border border-blue-400/30 px-2 sm:px-3 py-0.5 text-[9px] sm:text-xs font-bold uppercase tracking-wider text-blue-300">
+                      <span className="h-1.5 w-1.5 rounded-full bg-blue-400 animate-ping" />
+                      {targetFeaturedBadge}
+                    </span>
+                  </div>
+
+                  <h3 className="text-base sm:text-2xl lg:text-3xl font-extrabold text-white tracking-tight line-clamp-1 sm:line-clamp-none">
                     {targetFeaturedTitle}
                   </h3>
-                  <p className="text-sm text-slate-300 leading-relaxed">
+
+                  <p className="text-[11px] sm:text-sm text-slate-300 line-clamp-2 leading-relaxed">
                     {targetFeaturedDesc}
                   </p>
-                  <div className="flex flex-wrap items-baseline gap-3">
-                    <span className="text-3xl font-extrabold text-blue-400">
+
+                  <div className="flex flex-wrap items-baseline gap-1.5 sm:gap-3 pt-0.5">
+                    <span className="text-base sm:text-2xl lg:text-3xl font-extrabold text-blue-400 tracking-tight">
                       {formatCurrency(targetFeaturedPrices.finalPrice)}
                     </span>
                     {targetFeaturedPrices.originalPrice && targetFeaturedPrices.originalPrice > targetFeaturedPrices.finalPrice ? (
-                      <span className="text-sm text-slate-400 line-through">
+                      <span className="text-[10px] sm:text-xs text-slate-500 line-through">
                         {formatCurrency(targetFeaturedPrices.originalPrice)}
                       </span>
                     ) : null}
                   </div>
-                  <div className="flex flex-wrap gap-3 pt-2">
+
+                  <div className="flex flex-wrap items-center gap-2 pt-1 sm:pt-2">
                     <button
                       type="button"
                       onClick={() => {
@@ -606,29 +615,30 @@ const PublicHome = () => {
                           navigate("/products");
                         }
                       }}
-                      className="rounded-xl bg-blue-600 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-blue-600/30 transition hover:bg-blue-500"
+                      className="rounded-lg sm:rounded-xl bg-blue-600 px-3.5 py-1.5 sm:px-6 sm:py-2.5 text-xs sm:text-sm font-bold text-white shadow-lg shadow-blue-600/30 transition hover:bg-blue-500 active:scale-95 shrink-0"
                     >
-                      Xem chi tiết
+                      Xem chi tiết →
                     </button>
                     <button
                       type="button"
                       onClick={() => navigate("/products")}
-                      className="rounded-xl border border-white/20 bg-white/10 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/20"
+                      className="hidden sm:inline-flex rounded-xl border border-white/20 bg-white/10 px-4 py-2.5 text-xs sm:text-sm font-semibold text-white transition hover:bg-white/20 active:scale-95"
                     >
                       Khám phá thêm
                     </button>
                   </div>
                 </div>
+
+                {/* Right: Device Image seamlessly floating with no borders */}
                 {targetFeaturedImage ? (
-                  <div className="relative mt-6 flex w-full items-center justify-center lg:mt-0 lg:w-auto">
-                    <div className="relative p-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md shadow-2xl">
-                      <img
-                        src={targetFeaturedImage}
-                        alt={targetFeaturedTitle}
-                        className="h-56 w-56 sm:h-64 sm:w-64 object-contain drop-shadow-2xl transition duration-500 hover:scale-105"
-                        loading="lazy"
-                      />
-                    </div>
+                  <div className="relative flex items-center justify-center h-full min-h-[130px] sm:min-h-[220px]">
+                    <div className="absolute inset-0 bg-blue-500/10 rounded-full blur-xl transform scale-75 pointer-events-none" />
+                    <img
+                      src={targetFeaturedImage}
+                      alt={targetFeaturedTitle}
+                      className="relative z-10 max-h-[140px] sm:max-h-[240px] lg:max-h-[280px] w-auto max-w-full object-contain drop-shadow-[0_12px_24px_rgba(0,0,0,0.8)] transition duration-500 hover:scale-105"
+                      loading="lazy"
+                    />
                   </div>
                 ) : null}
               </div>
@@ -675,17 +685,19 @@ const PublicHome = () => {
           </div>
 
           {gridIsLoading ? (
-            <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="mt-6 sm:mt-8 grid grid-cols-2 gap-2.5 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4">
               {Array.from({ length: 8 }).map((_, index) => (
-                <SkeletonCard key={index} />
+                <div key={index} className="min-w-0">
+                  <SkeletonCard />
+                </div>
               ))}
             </div>
           ) : gridProducts.length ? (
-            <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="mt-6 sm:mt-8 grid grid-cols-2 gap-2.5 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4">
               {gridProducts.map((product, productIndex) => (
                 <div
                   key={product._id || product.slug || productIndex}
-                  className={`motion-card motion-delay-${(productIndex % 6) + 1}`}
+                  className={`motion-card min-w-0 motion-delay-${(productIndex % 6) + 1}`}
                 >
                   <ProductCard product={product} />
                 </div>

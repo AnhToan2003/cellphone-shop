@@ -211,25 +211,25 @@ export default function Header() {
     >
       {/* Main Apple-style Minimalist Header */}
       <div
-        className={`bg-slate-950/90 backdrop-blur-xl border-b border-white/10 text-white shadow-2xl transition-all duration-300 ${
-          isCompact ? "py-2.5" : "py-3.5"
+        className={`bg-slate-950/95 backdrop-blur-xl border-b border-white/10 text-white shadow-xl transition-all duration-300 ${
+          isCompact ? "py-1.5 sm:py-2.5" : "py-2 sm:py-3.5"
         }`}
       >
         <div className="max-w-7xl mx-auto px-3 sm:px-6 flex items-center justify-between gap-2 sm:gap-4">
           {/* Logo & Brand Name */}
           <Link to="/" className="flex min-w-0 items-center gap-2 sm:gap-3 group shrink">
-            <div className="relative">
+            <div className="relative shrink-0">
               <img
                 src="/logo.jpg"
                 alt="Ngọc Triết Store"
-                className="h-9 w-9 sm:h-10 sm:w-10 md:h-11 md:w-11 rounded-full border border-white/20 object-cover shadow-lg transition-transform duration-300 group-hover:scale-105"
+                className="h-8 w-8 sm:h-10 sm:w-10 md:h-11 md:w-11 rounded-full border border-white/20 object-cover shadow-lg transition-transform duration-300 group-hover:scale-105"
               />
             </div>
-            <div className="flex flex-col">
-              <span className="font-display text-base md:text-lg font-bold tracking-tight text-white group-hover:text-slate-300 transition">
+            <div className="flex flex-col min-w-0">
+              <span className="font-display text-sm sm:text-base md:text-lg font-bold tracking-tight text-white group-hover:text-slate-300 transition truncate">
                 NgocTrietStore
               </span>
-              <span className="text-[9px] md:text-[10px] font-medium tracking-[0.2em] text-slate-400 uppercase">
+              <span className="text-[8px] sm:text-[9px] md:text-[10px] font-medium tracking-[0.15em] sm:tracking-[0.2em] text-slate-400 uppercase leading-none truncate">
                 Apple Specialist
               </span>
             </div>
@@ -477,21 +477,21 @@ export default function Header() {
             <button
               type="button"
               onClick={() => setIsMobileMenuOpen((prev) => !prev)}
-              className="lg:hidden flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full bg-white/5 border border-white/10 text-slate-300 hover:text-white"
-              aria-label="Menu"
+              className="lg:hidden flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full bg-white/10 border border-white/15 text-slate-200 hover:text-white"
+              aria-label={isMobileMenuOpen ? "Đóng menu" : "Mở menu"}
             >
-              {isMobileMenuOpen ? <FiX size={18} /> : <FiMenu size={18} />}
+              {isMobileMenuOpen ? <FiX size={17} /> : <FiMenu size={17} />}
             </button>
           </div>
         </div>
 
         {/* Mobile Search Row (visible on small screens) */}
-        <div className="px-4 pt-2.5 pb-1 md:hidden">
+        <div className="px-3 pt-2 pb-1 md:hidden">
           <form
             onSubmit={handleSearchSubmit}
-            className="flex w-full items-center gap-2 rounded-full bg-white/5 border border-white/10 px-3.5 py-1.5 text-sm text-white"
+            className="flex w-full items-center gap-2 rounded-full bg-white/10 border border-white/15 px-3 py-1.5 text-xs text-white focus-within:border-white/30"
           >
-            <FiSearch className="text-slate-400 shrink-0" size={14} />
+            <FiSearch className="text-slate-400 shrink-0" size={13} />
             <input
               type="search"
               value={query}
@@ -499,6 +499,19 @@ export default function Header() {
               placeholder="Tìm iPhone, iPad, Mac..."
               className="w-full bg-transparent border-none outline-none text-xs text-white placeholder:text-slate-400"
             />
+            {query && (
+              <button
+                type="button"
+                onClick={() => {
+                  setQuery("");
+                  dispatch(setFilters({ search: "", page: 1 }));
+                }}
+                className="text-slate-400 hover:text-white"
+                aria-label="Xóa tìm kiếm"
+              >
+                <FiX size={12} />
+              </button>
+            )}
           </form>
         </div>
       </div>
@@ -554,7 +567,22 @@ export default function Header() {
 
       {/* Mobile Drawer Menu */}
       {isMobileMenuOpen && (
-        <div className="lg:hidden border-b border-white/10 bg-slate-950/98 px-5 py-4 text-slate-200 shadow-2xl backdrop-blur-xl animate-fade-in-up">
+        <div className="lg:hidden border-b border-white/10 bg-slate-950 px-4 py-3 text-slate-200 shadow-2xl backdrop-blur-2xl animate-fade-in-up max-h-[75vh] overflow-y-auto overscroll-contain">
+          <div className="flex items-center justify-between pb-2.5 mb-2 border-b border-white/10">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+              Danh mục & Điều hướng
+            </span>
+            <button
+              type="button"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="flex items-center gap-1 rounded-full bg-white/10 px-2.5 py-1 text-xs font-semibold text-slate-200 hover:bg-white/20 hover:text-white transition"
+              aria-label="Đóng menu"
+            >
+              <FiX size={13} />
+              <span>Đóng</span>
+            </button>
+          </div>
+
           <div className="space-y-1">
             <NavLink
               to="/"

@@ -272,7 +272,7 @@ const AllProducts = () => {
         </section>
 
         {/* Category Navigation Tabs */}
-        <div className="flex flex-wrap gap-2">
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 sm:flex-wrap">
           {categoriesList.map((cat) => {
             const isActive = category.toLowerCase() === cat.id.toLowerCase();
             return (
@@ -280,7 +280,7 @@ const AllProducts = () => {
                 key={cat.id || "all"}
                 type="button"
                 onClick={() => handleCategorySelect(cat.id)}
-                className={`rounded-full px-5 py-2.5 text-xs sm:text-sm font-bold transition-all duration-200 shadow-sm ${
+                className={`shrink-0 rounded-full px-4 sm:px-5 py-2 sm:py-2.5 text-xs sm:text-sm font-bold transition-all duration-200 shadow-sm active:scale-95 ${
                   isActive
                     ? "bg-slate-950 text-white shadow-md scale-105"
                     : "bg-white text-slate-700 hover:bg-slate-100 border border-slate-200/80"
@@ -294,14 +294,14 @@ const AllProducts = () => {
 
         {/* SubCategory Filter Pills (When a category with subcategories is selected) */}
         {activeCategoryObj?.subCategories?.length ? (
-          <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200 bg-white/70 p-3 backdrop-blur-sm">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-400 pl-2">
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar rounded-2xl border border-slate-200 bg-white/70 p-2.5 sm:p-3 backdrop-blur-sm sm:flex-wrap">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-400 pl-2 shrink-0">
               Dòng máy:
             </span>
             <button
               type="button"
               onClick={() => handleSubCategorySelect("")}
-              className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition ${
+              className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition active:scale-95 ${
                 !subCategory
                   ? "bg-blue-600 text-white"
                   : "bg-slate-100 text-slate-600 hover:bg-slate-200"
@@ -316,7 +316,7 @@ const AllProducts = () => {
                   key={sub}
                   type="button"
                   onClick={() => handleSubCategorySelect(sub)}
-                  className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition ${
+                  className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition active:scale-95 ${
                     isActiveSub
                       ? "bg-blue-600 text-white shadow-sm"
                       : "bg-slate-100 text-slate-600 hover:bg-slate-200"
@@ -377,17 +377,19 @@ const AllProducts = () => {
           {/* Product Grid */}
           <div className="mt-6">
             {loading ? (
-              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              <div className="grid grid-cols-2 gap-2.5 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4">
                 {Array.from({ length: 8 }).map((_, index) => (
-                  <SkeletonCard key={`skeleton-${index}`} />
+                  <div key={`skeleton-${index}`} className="min-w-0">
+                    <SkeletonCard />
+                  </div>
                 ))}
               </div>
             ) : products.length ? (
-              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              <div className="grid grid-cols-2 gap-2.5 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4">
                 {products.map((product, index) => (
                   <div
                     key={product._id || product.slug || index}
-                    className={`motion-card motion-delay-${(index % 6) + 1}`}
+                    className={`motion-card min-w-0 motion-delay-${(index % 6) + 1}`}
                   >
                     <ProductCard product={product} />
                   </div>

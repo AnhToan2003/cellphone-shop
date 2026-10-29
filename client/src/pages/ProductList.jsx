@@ -233,17 +233,19 @@ const ProductList = () => {
 
           <div className="mt-6">
             {isLoadingProducts ? (
-              <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+              <div className="grid grid-cols-2 gap-2.5 sm:gap-6 lg:grid-cols-3">
                 {Array.from({ length: 6 }).map((_, index) => (
-                  <SkeletonCard key={`skeleton-${index}`} />
+                  <div key={`skeleton-${index}`} className="min-w-0">
+                    <SkeletonCard />
+                  </div>
                 ))}
               </div>
             ) : products.length ? (
-              <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+              <div className="grid grid-cols-2 gap-2.5 sm:gap-6 lg:grid-cols-3">
                 {products.map((product, index) => (
                   <div
                     key={product._id || product.slug || index}
-                    className="motion-card motion-delay-2"
+                    className="motion-card min-w-0 motion-delay-2"
                   >
                     <ProductCard product={product} />
                   </div>

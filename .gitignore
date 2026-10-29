@@ -27,3 +27,6 @@ yarn-error.log*
 .vercel
 .env.local
 .env.*.local
+
+scratch/
+cellphone-shop/
