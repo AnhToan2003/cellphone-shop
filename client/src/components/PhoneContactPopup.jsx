@@ -12,7 +12,7 @@ export default function PhoneContactPopup() {
   return (
     <aside
       aria-label="Liên hệ nhanh"
-      className="fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] right-3.5 sm:bottom-6 sm:right-6 z-50 flex flex-col items-end gap-2.5 sm:gap-3 select-none"
+      className="fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] right-3.5 sm:bottom-6 sm:right-6 z-50 flex flex-col items-end gap-3 select-none"
     >
       {/* Expanded contact panel */}
       {open && (
@@ -58,35 +58,31 @@ export default function PhoneContactPopup() {
         </div>
       )}
 
-      {/* Main toggle button */}
+      {/* Main circular floating action button (FAB) */}
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
         aria-expanded={open}
-        aria-label={open ? "Đóng" : "Gọi ngay"}
-        className={`group relative flex items-center justify-center gap-2 overflow-hidden rounded-full font-bold text-white shadow-2xl transition-all duration-300 hover:scale-105 active:scale-95 px-4 py-3 sm:px-6 sm:py-3.5 min-h-[46px] ${
+        aria-label={open ? "Đóng menu liên hệ" : "Gọi ngay Hotline 039 555 4268"}
+        className={`group relative flex items-center justify-center rounded-full font-bold text-white shadow-2xl transition-all duration-300 hover:scale-105 active:scale-95 h-14 w-14 sm:h-16 sm:w-16 ${
           open
-            ? "bg-slate-800 shadow-slate-700/40 hover:bg-slate-700"
-            : "bg-blue-600 shadow-blue-500/50 hover:bg-blue-500 hover:shadow-blue-500/70"
+            ? "bg-slate-800 shadow-slate-700/50 hover:bg-slate-700"
+            : "bg-blue-600 shadow-blue-500/60 hover:bg-blue-500"
         }`}
       >
-        {/* Pulsing ring when closed */}
+        {/* Pulsing halo ring when closed */}
         {!open && (
-          <span className="absolute inset-0 rounded-full animate-ping bg-blue-400 opacity-25 pointer-events-none" />
+          <span className="absolute inset-0 rounded-full animate-ping bg-blue-400 opacity-30 pointer-events-none" />
         )}
-        <span className="relative flex items-center gap-2">
-          {open ? (
-            <FiX size={20} className="sm:h-5 sm:w-5" />
-          ) : (
-            <span className="relative flex h-5 w-5 items-center justify-center">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-60" />
-              <FiPhoneCall size={18} className="relative sm:h-5 sm:w-5" />
-            </span>
-          )}
-          <span className="text-xs sm:text-sm font-bold tracking-wide">
-            {open ? "Đóng" : "Gọi ngay"}
+
+        {open ? (
+          <FiX size={26} className="text-white transition-transform duration-200" />
+        ) : (
+          <span className="relative flex h-7 w-7 items-center justify-center">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-60" />
+            <FiPhoneCall size={24} className="relative sm:h-7 sm:w-7 text-white" />
           </span>
-        </span>
+        )}
       </button>
     </aside>
   );
